@@ -8,7 +8,8 @@ void fsh_printf(void (*write)(void*, char), void* arg, const char* format, ...);
     fsh_printf(pcmd->pfn_stderr, pcmd->user, "%s: " fmt "\n", pcmd->cmdname, ##__VA_ARGS__)
 
 #define pout(fmt, ...) \
-    fsh_printf(pcmd->pfn_stderr, pcmd->user, fmt, ##__VA_ARGS__)
+    fsh_printf(pcmd->pfn_stdout, pcmd->user, fmt, ##__VA_ARGS__)
+
 
 // --- Command context ---
 
@@ -30,5 +31,21 @@ typedef struct
     void (*pfn_stderr)(void*,char);
 
 } CMD_CONTEXT;
+
+
+int cmd_cat(CMD_CONTEXT* pcmd);
+int cmd_cd(CMD_CONTEXT* pcmd);
+int cmd_cp(CMD_CONTEXT* pcmd);
+int cmd_echo(CMD_CONTEXT* pcmd);
+int cmd_hexdump(CMD_CONTEXT* pcmd);
+int cmd_ls(CMD_CONTEXT* pcmd);
+int cmd_mkdir(CMD_CONTEXT* pcmd);
+int cmd_mv(CMD_CONTEXT* pcmd);
+int cmd_pwd(CMD_CONTEXT* pcmd);
+int cmd_rm(CMD_CONTEXT* pcmd);
+int cmd_rmdir(CMD_CONTEXT* pcmd);
+int cmd_touch(CMD_CONTEXT* pcmd);
+
+
 
 int cmd(CMD_CONTEXT* pctx);
