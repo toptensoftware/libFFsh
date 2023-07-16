@@ -9,7 +9,6 @@
 #include "../libFsh/commands.h"
 #include "../libFsh/path.h"
 #include "../libFsh/bracexp.h"
-#include "../libFsh/enum_opts.h"
 
 void fsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
 {
@@ -59,9 +58,9 @@ int main()
         printf("%s %s\n", opt.pszOpt, opt.pszValue ? opt.pszValue : "null");
     }
     return 0;
-    */
     printf("%i\n", is_opt("-a", "-a|--longx"));
     return 0;
+    */
 
     // Initialize disk
     printf("Mounting disk... ");

@@ -2,7 +2,6 @@
 
 #include "path.h"
 #include "args.h"
-#include "enum_opts.h"
 #include "enum_args.h"
 #include "ffex.h"
 

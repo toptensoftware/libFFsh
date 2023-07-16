@@ -3,7 +3,6 @@
 #include "commands.h"
 #include "path.h"
 #include "args.h"
-#include "enum_opts.h"
 #include "enum_args.h"
 #include "ffex.h"
 
@@ -15,46 +14,33 @@ int cmd_echo(CMD_CONTEXT* pcmd)
     bool optNoNewLine = false;
 
     // Process options
-    ENUM_OPTS opts;
+    ENUM_ARGS args;
+    start_enum_args(&args, pcmd, pcmd->pargs);
+    
     OPT opt;
-    enum_opts(&opts, pcmd->pargs);
-    while (next_opt(&opts, &opt))
+    while (next_opt(&args, &opt))
     {
-        if (strcmp(opt.pszOpt, "-o") == 0 || strcmp(opt.pszOpt, "--out") == 0)
+        if (is_value_opt(&args, &opt, "-o|--out"))
         {
-            if (optOut)
-            {
-                perr("multiple -o options");
-                return -1;
-            }
-            if (opt.pszValue == NULL)
-            {
-                perr("-o argument missing");
-                return -1;
-            }
             if (pathisdir(opt.pszValue))
             {
                 perr("'%s' is a directory", opt.pszValue);
+                abort_enum_args(&args, -1);
             }
             strcpy(szOutFile, pcmd->cwd);
             pathcat(szOutFile, opt.pszValue);
             pathcan(szOutFile);
             optOut = true;
         }
-        else if (strcmp(opt.pszOpt, "-a") == 0 || strcmp(opt.pszOpt, "--append") == 0)
-        {
+        else if (is_switch(&args, &opt, "-a|--append"))
             optAppend = true;
-        }
-        else if (strcmp(opt.pszOpt, "-n") == 0)
-        {
+        else if (is_switch(&args, &opt, "-n"))
             optNoNewLine = true;
-        }
         else
-        {
-            perr("unknown option: '%s'", opt.pszOpt);
-            return -1;
-        }
+            unknown_opt(&args, &opt);
     }
+    if (enum_args_error(&args))
+        return end_enum_args(&args);
 
     // Open output file
     FIL file;
@@ -69,11 +55,9 @@ int cmd_echo(CMD_CONTEXT* pcmd)
     }
 
     // Process args
-    ENUM_ARGS args;
     ARG arg;
     bool first = true;
     UINT unused;
-    start_enum_args(&args, pcmd, pcmd->pargs);
     while (next_arg(&args, &arg))
     {
         if (optOut)

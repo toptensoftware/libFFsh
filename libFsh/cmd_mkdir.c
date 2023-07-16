@@ -3,7 +3,6 @@
 #include "commands.h"
 #include "path.h"
 #include "args.h"
-#include "enum_opts.h"
 #include "enum_args.h"
 #include "ffex.h"
 
@@ -12,33 +11,22 @@ int cmd_mkdir(CMD_CONTEXT* pcmd)
     bool makeParents = false;
 
     // Process options
-    ENUM_OPTS opts;
-    OPT opt;
-    enum_opts(&opts, pcmd->pargs);
-    while (next_opt(&opts, &opt))
-    {
-        if (strcmp(opt.pszOpt, "-p") == 0 || strcmp(opt.pszOpt, "--parents") == 0)
-        {
-            if (opt.pszValue == NULL)
-            {
-                makeParents = true;
-                continue;
-            }
-            else
-            {
-                perr("unexpected value '%s'", opt.pszValue);
-                return -1;
-            }
-        }
+    ENUM_ARGS args;
+    start_enum_args(&args, pcmd, pcmd->pargs);
 
-        perr("unknown option: '%s'", opt.pszOpt);
-        return -1;
+    OPT opt;
+    while (next_opt(&args, &opt))
+    {
+        if (is_switch(&args, &opt, "-p|--parents"))
+            makeParents = true;
+        else
+            unknown_opt(&args, &opt);
     }
+    if (enum_args_error(&args))
+        return end_enum_args(&args);
 
     // Process args (1st pass list files)
-    ENUM_ARGS args;
     ARG arg;
-    start_enum_args(&args, pcmd, pcmd->pargs);
     while (next_arg(&args, &arg))
     {
         if (!arg.pfi)

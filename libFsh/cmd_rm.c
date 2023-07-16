@@ -3,33 +3,30 @@
 #include "commands.h"
 #include "path.h"
 #include "args.h"
-#include "enum_opts.h"
 #include "enum_args.h"
 #include "ffex.h"
 
 int cmd_rm(CMD_CONTEXT* pcmd)
 {
     bool optRecursive = false;
-    // Process options
-    ENUM_OPTS opts;
-    OPT opt;
-    enum_opts(&opts, pcmd->pargs);
-    while (next_opt(&opts, &opt))
-    {
-        if (strcmp(opt.pszOpt, "-r") == 0)
-        {
-            optRecursive = true;
-            continue;
-        }
 
-        perr("unknown option: '%s'", opt.pszOpt);
-        return -1;
+    // Process options
+    ENUM_ARGS args;
+    start_enum_args(&args, pcmd, pcmd->pargs);
+
+    OPT opt;
+    while (next_opt(&args, &opt))
+    {
+        if (is_switch(&args, &opt, "-r|--recursive"))
+            optRecursive = true;
+        else
+            unknown_opt(&args, &opt);
     }
+    if (enum_args_error(&args))
+        return end_enum_args(&args);
 
     // Process args (1st pass list files)
-    ENUM_ARGS args;
     ARG arg;
-    start_enum_args(&args, pcmd, pcmd->pargs);
     while (next_arg(&args, &arg))
     {
         if (!arg.pfi)

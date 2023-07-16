@@ -4,12 +4,14 @@
 
 #include "path.h"
 #include "ffex.h"
+#include "utf.h"
 
 enum state
 {
     state_init = 0,
     state_enum_opts = 1,
     state_enum_args = 2,
+    state_readdir = 3,
 };
 
 void start_enum_args(ENUM_ARGS* pctx, CMD_CONTEXT* pcmd, ARGS* pargs)
@@ -24,38 +26,7 @@ void start_enum_args(ENUM_ARGS* pctx, CMD_CONTEXT* pcmd, ARGS* pargs)
     pctx->pszShort = NULL;
 
     // Enum args
-    pctx->inFind = false;
     pctx->err = 0;
-}
-
-
-int handle_find_path(ENUM_ARGS* pctx, ARG* ppath)
-{
-    // Set in find flag
-    pctx->inFind = true;
-
-    // Work out absolute path
-    strcpy(pctx->szAbs, pctx->sz);
-    pathcat(pctx->szAbs, pctx->fi.fname);
-
-    // Work out relative path
-    if (pctx->pszRelBase)
-    {
-        size_t len = pctx->pszRelBase - pctx->pszArg;
-        strncpy(pctx->szRel, pctx->pszArg, len);
-        pctx->szRel[len] = '\0';
-        pathcat(pctx->szRel, pctx->fi.fname);
-    }
-    else
-    {
-        strcpy(pctx->szRel, pctx->fi.fname);
-    }
-
-    // Setup result
-    ppath->pszAbsolute = pctx->szAbs;
-    ppath->pszRelative = pctx->szRel;
-    ppath->pfi = &pctx->fi;
-    return 0;
 }
 
 
@@ -217,117 +188,180 @@ bool is_opt(const char* pszOpt, const char* pszOptNames)
     }
 }
 
+// Check if popt matches opt name, and no value
+bool is_switch(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames)
+{
+    if (!is_opt(popt->pszOpt, pszOptNames))
+        return false;
+
+    if (popt->pszValue)
+    {
+        CMD_CONTEXT* pcmd = pctx->pcmd;
+        perr("unexpected value passed to '%s'", popt->pszOpt);
+        set_enum_args_error(pctx, -1);
+        return false;
+    }
+    return true;
+}
+
+// Check if popt matches opt name, with value
+bool is_value_opt(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames)
+{
+    if (!is_opt(popt->pszOpt, pszOptNames))
+        return false;
+
+    if (!popt->pszValue)
+    {
+        CMD_CONTEXT* pcmd = pctx->pcmd;
+        perr("expected value for '%s'", popt->pszOpt);
+        set_enum_args_error(pctx, -1);
+        return false;
+    }
+
+    return true;
+}
+
+// Unknown opt handler
+void unknown_opt(ENUM_ARGS* pctx, OPT* popt)
+{
+    CMD_CONTEXT* pcmd = pctx->pcmd;
+    perr("invalid option: '%s'", popt->pszOpt);
+    abort_enum_args(pctx, -1);
+}
+
 
 bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
 {
     // For perr
     CMD_CONTEXT* pcmd = pctx->pcmd;
 
-    // Reset state?
-    if (pctx->state != state_enum_args)
+    while (true)
     {
-        pctx->index = 0;
-        pctx->state = state_enum_args;
-    }
-
-    // Continue find?
-    if (pctx->inFind)
-    {
-        // Find next
-        int err = f_findnext(&pctx->dir, &pctx->fi);
-        while (!err && pctx->fi.fname[0] && f_is_hidden(&pctx->fi))
-            err = f_findnext(&pctx->dir, &pctx->fi);
-        if (err != FR_OK)
+        switch (pctx->state)
         {
-            perr("find path failed: '%s', %s (%i)\n", pctx->pszArg, f_strerror(err), err);
-            abort_enum_args(pctx, f_maperr(err));
-            return false;
-        }
-        
-        // Handle it if more
-        if (pctx->fi.fname[0])
-        {
-            handle_find_path(pctx, ppath);
-            return true;
-        }
-        
-        // No longer in find
-        f_closedir(&pctx->dir);
-        pctx->inFind = false;
-    }
-
-    // Process all args
-    while (pctx->index < pctx->pargs->argc)
-    {
-        // Get next arg
-        pctx->pszArg = pctx->pargs->argv[pctx->index++];
-
-        // Get full path
-        strcpy(pctx->sz, pctx->pcmd->cwd);
-        pathcat(pctx->sz, pctx->pszArg);
-        pathcan(pctx->sz);
-        if (pathisdir(pctx->pszArg))
-            pathensuredir(pctx->sz); // Maintain trailing slash
-
-        // Split the full path at last element
-        pctx->pszBase = pathsplit(pctx->sz);
-        pctx->pszRelBase = pathbase(pctx->pszArg);
-
-        // Check no wildcard was in the directory part
-        if (pathiswild(pctx->sz))
-        {
-            perr("wildcards in directory paths not supported: '%s'\n", pctx->sz);
-            abort_enum_args(pctx, -1);
-            return false;
-        }
-
-        // Does it contain wildcards
-        if (pathiswild(pctx->pszBase))
-        {
-            // Enumerate directory
-            int err = f_findfirst(&pctx->dir, &pctx->fi, pctx->sz, pctx->pszBase);
-            while (!err && pctx->fi.fname[0] && f_is_hidden(&pctx->fi))
-                err = f_findnext(&pctx->dir, &pctx->fi);
-            if (err)
+            case state_readdir:
             {
-                perr("find path failed: '%s', %s (%i)\n", pctx->pszArg, f_strerror(err), err);
-                abort_enum_args(f_maperr(err));
-                return false;
-            }
-            if (pctx->fi.fname[0])
-            {
-                handle_find_path(pctx, ppath);
+                // Read next directory entry
+                int err = f_readdir(&pctx->dir, &pctx->fi);
+                if (err)
+                {
+                    perr("read directory failed: '%s', %s (%i)\n", pctx->pszArg, f_strerror(err), err);
+                    abort_enum_args(pctx, f_maperr(err));
+                    pctx->state = state_enum_args;
+                    break;
+                }
+
+                // End of directory?
+                if (pctx->fi.fname[0] == 0)
+                {
+                    f_closedir(&pctx->dir);
+                    pctx->state = state_enum_args;
+                    break;
+                }
+
+                // Ignore hidden items
+                if (f_is_hidden(&pctx->fi))
+                    break;
+
+                // Does it match pattern?
+                if (!pathglob(pctx->fi.fname, pctx->pszBase, false, special_arg_chars))
+                    break;
+
+                // Work out absolute path
+                strcpy(pctx->szAbs, pctx->sz);
+                pathcat(pctx->szAbs, pctx->fi.fname);
+
+                // Work out relative path
+                if (pctx->pszRelBase)
+                {
+                    size_t len = pctx->pszRelBase - pctx->pszArg;
+                    strncpy(pctx->szRel, pctx->pszArg, len);
+                    pctx->szRel[len] = '\0';
+                    pathcat(pctx->szRel, pctx->fi.fname);
+                }
+                else
+                {
+                    strcpy(pctx->szRel, pctx->fi.fname);
+                }
+
+                // Setup result
+                ppath->pszAbsolute = pctx->szAbs;
+                ppath->pszRelative = pctx->szRel;
+                ppath->pfi = &pctx->fi;
                 return true;
             }
-            
-            f_closedir(&pctx->dir);
-        }
-        else
-        {
-            // Setup PATHINFO
-            ((char*)pctx->pszBase)[-1] = '/';      // unsplit
-            ppath->pszRelative = pctx->pszArg;
-            ppath->pszAbsolute = pctx->sz;
-            ppath->pfi = NULL;
 
-            // Is it the root directory
-
-            // Stat
-            if (f_stat_ex(pctx->sz, &pctx->fi) == FR_OK)
+            case state_enum_args:
             {
-                ppath->pfi = &pctx->fi;
+                // Any more?
+                if (pctx->index >= pctx->pargs->argc)
+                    return false;
 
-                // If path looks like a directory, but matched a file
-                // then mark it as not found
-                if (pathisdir(ppath->pszAbsolute) && (pctx->fi.fattrib & AM_DIR)==0)
+                // Get next arg
+                pctx->pszArg = pctx->pargs->argv[pctx->index++];
+
+                // Get full path
+                strcpy(pctx->sz, pctx->pcmd->cwd);
+                pathcat(pctx->sz, pctx->pszArg);
+                pathcan(pctx->sz);
+                if (pathisdir(pctx->pszArg))
+                    pathensuredir(pctx->sz); // Maintain trailing slash
+
+                // Split the full path at last element
+                pctx->pszBase = pathsplit(pctx->sz);
+                pctx->pszRelBase = pathbase(pctx->pszArg);
+
+                // Check no wildcard was in the directory part
+                if (pathisglob(pctx->sz, special_arg_chars))
                 {
-                    perr("path is not a directory: '%s'\n", ppath->pszRelative);
+                    perr("wildcards in directory paths not supported: '%s'\n", pctx->sz);
                     abort_enum_args(pctx, -1);
                     return false;
                 }
+
+                // Does it contain wildcards
+                if (pathisglob(pctx->pszBase, special_arg_chars))
+                {
+                    // Enumerate directory
+                    int err = f_opendir(&pctx->dir, pctx->sz);
+                    if (err)
+                    {
+                        perr("find path failed: '%s', %s (%i)\n", pctx->pszArg, f_strerror(err), err);
+                        abort_enum_args(pctx, f_maperr(err));
+                        return false;
+                    }
+                    pctx->state = state_readdir;
+                    break;
+                }
+
+                // Setup PATHINFO
+                ((char*)pctx->pszBase)[-1] = '/';      // unsplit
+                ppath->pszRelative = pctx->pszArg;
+                ppath->pszAbsolute = pctx->sz;
+                ppath->pfi = NULL;
+
+                // Stat
+                if (f_stat_ex(pctx->sz, &pctx->fi) == FR_OK)
+                {
+                    ppath->pfi = &pctx->fi;
+
+                    // If path looks like a directory, but matched a file
+                    // then mark it as not found
+                    if (pathisdir(ppath->pszAbsolute) && (pctx->fi.fattrib & AM_DIR)==0)
+                    {
+                        perr("path is not a directory: '%s'\n", ppath->pszRelative);
+                        abort_enum_args(pctx, -1);
+                        return false;
+                    }
+                }
+
+                return true;
             }
 
-            return true;
+            default:
+                pctx->state = state_enum_args;
+                pctx->index = 0;
+                break;
         }
     }
 
@@ -340,13 +374,22 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
 
 int end_enum_args(ENUM_ARGS* pctx)
 {
-    if (pctx->inFind)
+    if (pctx->state == state_readdir)
     {
         f_closedir(&pctx->dir);
-        pctx->inFind = false;
+        pctx->state = state_init;
     }
     return pctx->err;
 }
+
+int enum_args_error(ENUM_ARGS* pctx)
+{
+    if (pctx->err)
+        end_enum_args(pctx);
+
+    return pctx->err;
+}
+
 
 void abort_enum_args(ENUM_ARGS* pctx, int err)
 {
@@ -354,10 +397,10 @@ void abort_enum_args(ENUM_ARGS* pctx, int err)
     set_enum_args_error(pctx, err);
 
     // Abort find file
-    if (pctx->inFind)
+    if (pctx->state == state_readdir)
     {
         f_closedir(&pctx->dir);
-        pctx->inFind = false;
+        pctx->state = state_enum_args;
     }
 
     // Move index to end

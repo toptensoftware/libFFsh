@@ -53,22 +53,28 @@ typedef struct
 void start_enum_args(ENUM_ARGS* pctx, CMD_CONTEXT* pcmd, ARGS* pargs);
 
 // Get the next option
-bool next_opt(ENUM_OPTS* pctx, OPT* popt);
+bool next_opt(ENUM_ARGS* pctx, OPT* popt);
 
 // Check if option matches pszOptNames (eg: "-n|--longname")
 bool is_opt(const char* pszOpt, const char* pszOptNames);
 
 // Check if popt matches opt name, and no value
-bool is_switch(OPT* popt, const char* pszOptNames);
+bool is_switch(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames);
 
 // Check if popt matches opt name, with value
-bool is_value_opt(OPT* popt, const char* pszOptNames);
+bool is_value_opt(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames);
+
+// Unknown opt handler
+void unknown_opt(ENUM_ARGS* pctx, OPT* popt);
 
 // Get the next argument
 bool next_arg(ENUM_ARGS* pctx, ARG* ppath);
 
 // Finish expansion of path args
 int end_enum_args(ENUM_ARGS* pctx);
+
+// Check if error
+int enum_args_error(ENUM_ARGS* pctx);
 
 // Abort argument enumeration
 void abort_enum_args(ENUM_ARGS* pctx, int err);

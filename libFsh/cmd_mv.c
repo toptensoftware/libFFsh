@@ -3,7 +3,6 @@
 #include "commands.h"
 #include "path.h"
 #include "args.h"
-#include "enum_opts.h"
 #include "enum_args.h"
 #include "ffex.h"
 
@@ -12,30 +11,19 @@ int cmd_mv(CMD_CONTEXT* pcmd)
     bool optOverwrite = true;
 
     // Process options
-    ENUM_OPTS opts;
+    ENUM_ARGS args;
+    start_enum_args(&args, pcmd, pcmd->pargs);
+
     OPT opt;
-    enum_opts(&opts, pcmd->pargs);
-    while (next_opt(&opts, &opt))
+    while (next_opt(&args, &opt))
     {
-        if (strcmp(opt.pszOpt, "-n") == 0 || strcmp(opt.pszOpt, "--no-clobber") == 0)
-        {
-            if (opt.pszValue == NULL)
-            {
-                optOverwrite = false;
-                continue;
-            }
-            else
-            {
-                perr("unexpected value '%s'", opt.pszValue);
-                return -1;
-            }
-        }
+        if (is_switch(&args, &opt, "-n|--no-clobber"))
+            optOverwrite = false;
         else
-        {
-            perr("unknown option: '%s'", opt.pszOpt);
-            return -1;            
-        }
+            unknown_opt(&args, &opt);
     }
+    if (enum_args_error(&args))
+        return end_enum_args(&args);
 
     // Split off target args
     ARGS argsTarget;
@@ -49,7 +37,6 @@ int cmd_mv(CMD_CONTEXT* pcmd)
     char szTarget[FF_MAX_LFN];
     bool bTargetIsDir = false;
     szTarget[0] = '\0';
-    ENUM_ARGS args;
     ARG arg;
     start_enum_args(&args, pcmd, &argsTarget);
     while (next_arg(&args, &arg))
@@ -66,9 +53,8 @@ int cmd_mv(CMD_CONTEXT* pcmd)
         bTargetIsDir = pathisdir(arg.pszAbsolute) || (arg.pfi != NULL && (arg.pfi->fattrib & AM_DIR) != 0);
         strcpy(szTarget, arg.pszAbsolute);
     }
-    int err = end_enum_args(&args);
-    if (err)
-        return err;
+    if (enum_args_error(&args))
+        return end_enum_args(&args);
 
     // Remember length of target and check specified
     char* pszEndTarget = &szTarget[strlen(szTarget)];
@@ -97,7 +83,7 @@ int cmd_mv(CMD_CONTEXT* pcmd)
 
             // Check if it exists
             FILINFO fi;
-            err = f_stat(szTarget, &fi);
+            int err = f_stat(szTarget, &fi);
             if (err)
             {
                 if (err != FR_NO_FILE)
@@ -134,7 +120,7 @@ int cmd_mv(CMD_CONTEXT* pcmd)
             }
 
             // Rename it
-            int err = f_rename(arg.pszAbsolute, szTarget);
+            err = f_rename(arg.pszAbsolute, szTarget);
             if (err)
             {
                 perr("failed to rename '%s' -> '%s', %s (%i)", arg.pszRelative, szTarget, f_strerror(err), err);

@@ -242,21 +242,6 @@ char* pathcan(char* path)
 	return path;
 }
 
-// Check if path contains wildcard characters '*' or '?'
-bool pathiswild(const char* path)
-{
-    if (!path)
-        return false;
-    
-    for (uint32_t cp = utf8_decode(&path); cp != 0; cp = utf8_decode(&path))
-    {
-        if (cp == '?' || cp == '*')
-            return true;
-    }
-
-    return false;
-}
-
 // Checks if a path looks like a directory
 // (ie: ends in '/', '/..' or '/.', or backslash equivalent)
 bool pathisdir(const char* path)
@@ -368,10 +353,36 @@ bool pathcontains(const char* parent, const char* child, bool caseSensitive)
     }
 }
 
+static uint32_t default_globchars[2] = { '*' , '?' };
 
+#define globchar_star 0
+#define globchar_question 1
 
-bool pathglob(const char* filename, const char* pattern, bool caseSensitive)
+// Check if path contains wildcard characters '*' or '?'
+bool pathisglob(const char* path, const uint32_t* charset)
 {
+    if (!path)
+        return false;
+
+    if (charset == NULL)
+        charset = default_globchars;
+    
+    for (uint32_t cp = utf8_decode(&path); cp != 0; cp = utf8_decode(&path))
+    {
+        if (cp == charset[globchar_star] || cp == charset[globchar_question])
+            return true;
+    }
+
+    return false;
+}
+
+
+
+bool pathglob(const char* filename, const char* pattern, bool caseSensitive, const uint32_t* charset)
+{
+    if (charset == NULL)
+        charset = default_globchars;
+    
     const char* f = filename;
     const char* p = pattern;
 
@@ -389,14 +400,14 @@ bool pathglob(const char* filename, const char* pattern, bool caseSensitive)
 
         // End of sub-pattern?
         if (cp=='\0' || cf=='\0')
-            return cp == '*';
+            return cp == charset[globchar_star];
 
         // Single character wildcard
-        if (cp=='?')
+        if (cp==charset[globchar_question])
             continue;
 
         // Multi-character wildcard
-        if (cp=='*')
+        if (cp==charset[globchar_star])
         {
             // If nothing after the wildcard then match
             const char* prevp = p;
@@ -409,7 +420,7 @@ bool pathglob(const char* filename, const char* pattern, bool caseSensitive)
 
             while (cf != '\0')
             {
-                if (pathglob(f, p, caseSensitive))
+                if (pathglob(f, p, caseSensitive, charset))
                     return true;
 
                 cf = utf8_decode(&f);

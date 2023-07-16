@@ -3,7 +3,6 @@
 #include "commands.h"
 #include "path.h"
 #include "args.h"
-#include "enum_opts.h"
 #include "enum_args.h"
 #include "ffex.h"
 
@@ -80,26 +79,24 @@ int cmd_ls(CMD_CONTEXT* pcmd)
     bool optLong = false;
 
     // Process options
-    ENUM_OPTS opts;
+    ENUM_ARGS args;
+    start_enum_args(&args, pcmd, pcmd->pargs);
+
     OPT opt;
-    enum_opts(&opts, pcmd->pargs);
-    while (next_opt(&opts, &opt))
+    while (next_opt(&args, &opt))
     {
-        if (strcmp(opt.pszOpt, "-a") == 0)  
+        if (is_switch(&args, &opt, "-a|--all"))
             optAll = true;
-        else if (strcmp(opt.pszOpt, "-l") == 0)
+        else if (is_switch(&args, &opt, "-l"))
             optLong = true;
         else
-        {
-            perr("unknown option: '%s'", opt.pszOpt);
-            return -1;
-        }
+            unknown_opt(&args, &opt);
     }
+    if (enum_args_error(&args))
+        return end_enum_args(&args);
 
     // Process args (1st pass list files)
-    ENUM_ARGS args;
     ARG arg;
-    start_enum_args(&args, pcmd, pcmd->pargs);
     bool anydirs = false;
     bool anyargs = false;
     bool anyitems = false;

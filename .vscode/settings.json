@@ -2,7 +2,8 @@
     "files.associations": {
         "common.h": "c",
         "diskio.h": "c",
-        "commands.h": "c"
+        "commands.h": "c",
+        "enum_args.h": "c"
     },
     "cmake.configureOnOpen": false
 }

@@ -3,7 +3,6 @@
 #include "commands.h"
 #include "path.h"
 #include "args.h"
-#include "enum_opts.h"
 #include "enum_args.h"
 #include "ffex.h"
 #include "parse.h"
@@ -49,49 +48,33 @@ int cmd_hexdump(CMD_CONTEXT* pcmd)
     uint32_t optLength = 0xFFFFFFFF;
 
     // Process options
-    ENUM_OPTS opts;
+    ENUM_ARGS args;
+    start_enum_args(&args, pcmd, pcmd->pargs);
+
     OPT opt;
-    enum_opts(&opts, pcmd->pargs);
-    while (next_opt(&opts, &opt))
+    while (next_opt(&args, &opt))
     {
-        if (strcmp(opt.pszOpt, "-s") == 0 || strcmp(opt.pszOpt, "--skip") == 0)
+        if (is_value_opt(&args, &opt, "-s|--skip"))
         {
-            if (opt.pszValue == NULL)
+            if (!parse_uint32(opt.pszValue, &optSkip))
             {
-                perr("--skip argument missing");
-                return -1;
-            }
-            else
-            {   
-                if (!parse_uint32(opt.pszValue, &optSkip))
-                {
-                    perr("invalid --skip argument '%s'", opt.pszValue);
-                    return -1;
-                }
+                perr("invalid --skip argument '%s'", opt.pszValue);
+                set_enum_args_error(&args, -1);
             }
         }
-        else if (strcmp(opt.pszOpt, "-n") == 0 || strcmp(opt.pszOpt, "--length") == 0)
+        else if (is_value_opt(&args, &opt, "-n|--length"))
         {
-            if (opt.pszValue == NULL)
+            if (!parse_uint32(opt.pszValue, &optLength))
             {
-                perr("--length argument missing");
-                return -1;
-            }
-            else
-            {   
-                if (!parse_uint32(opt.pszValue, &optLength))
-                {
-                    perr("invalid --length argument '%s'", opt.pszValue);
-                    return -1;
-                }
+                perr("invalid --length argument '%s'", opt.pszValue);
+                set_enum_args_error(&args, -1);
             }
         }
         else
-        {
-            perr("unknown option: '%s'", opt.pszOpt);
-            return -1;
-        }
+            unknown_opt(&args, &opt);
     }
+    if (enum_args_error(&args))
+        return end_enum_args(&args);
 
     // Read buffer
     char buf[128];
@@ -99,9 +82,7 @@ int cmd_hexdump(CMD_CONTEXT* pcmd)
     uint32_t offset = 0;
 
     // Process args
-    ENUM_ARGS args;
     ARG arg;
-    start_enum_args(&args, pcmd, pcmd->pargs);
     while (next_arg(&args, &arg) && offset < optSkip + optLength)
     {
         if (arg.pfi == NULL)

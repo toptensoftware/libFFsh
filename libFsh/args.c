@@ -2,6 +2,11 @@
 #include "utf.h"
 #include "args.h"
 
+uint32_t special_arg_chars[] = {
+    1, 2, 3, 4, 5
+};
+
+
 bool isWhitespace(uint32_t codepoint)
 {
     return codepoint == ' ' || 
@@ -149,11 +154,11 @@ void parse_argv(char* psz, ARGS* pargs, int maxargc)
             // Convert special characters to tokens
             switch (u.codepoint)
             {
-                case '*': u.codepoint = TOKEN_STAR; break;
-                case '?': u.codepoint = TOKEN_QUESTION; break;
-                case '{': u.codepoint = TOKEN_OPENBRACE; break;
-                case '}': u.codepoint = TOKEN_CLOSEBRACE; break;
-                case ',': u.codepoint = TOKEN_COMMA; break;
+                case '*': u.codepoint = special_arg_chars[SPECIAL_CHAR_STAR]; break;
+                case '?': u.codepoint = special_arg_chars[SPECIAL_CHAR_QUESTION]; break;
+                case '{': u.codepoint = special_arg_chars[SPECIAL_CHAR_OPENBRACE]; break;
+                case '}': u.codepoint = special_arg_chars[SPECIAL_CHAR_CLOSEBRACE]; break;
+                case ',': u.codepoint = special_arg_chars[SPECIAL_CHAR_COMMA]; break;
             }
 
             // Other char
