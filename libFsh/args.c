@@ -206,4 +206,26 @@ bool split_args(ARGS* pargs, int position, ARGS* pTailArgs)
 }
 
 
+void restore_special_args(char* psz)
+{
+    char* pDest = psz;
+    while (true)
+    {
+        uint32_t cp = utf8_decode(&psz);
 
+        if (cp == special_arg_chars[SPECIAL_CHAR_STAR])
+            cp = '*';
+        else if (cp == special_arg_chars[SPECIAL_CHAR_QUESTION])
+            cp = '?';
+        else if (cp == special_arg_chars[SPECIAL_CHAR_OPENBRACE])
+            cp = '{';
+        else if (cp == special_arg_chars[SPECIAL_CHAR_CLOSEBRACE])
+            cp = '}';
+        else if (cp == special_arg_chars[SPECIAL_CHAR_COMMA])
+            cp = ',';
+
+        pDest += utf8_encode(cp, pDest, 4);
+        if (cp == 0)
+            break;
+    }
+}

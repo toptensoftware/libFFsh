@@ -29,3 +29,6 @@ void remove_arg(ARGS* pargs, int position);
 
 // Split arguments
 bool split_args(ARGS* pargs, int position, ARGS* pTailArgs);
+
+// Restore special characters to their default
+void restore_special_args(char* psz);

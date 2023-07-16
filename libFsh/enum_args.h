@@ -16,22 +16,27 @@ typedef struct
 
     int state;
     int index;
+    int err;
 
     // Opt enumeration
     char saveDelim;
     char* delimPos;
     const char* pszShort;
 
-    // Arg expansion
-    bool inFind;
-    int err;
+    // Brace expansion
+    int bracePerms;
+    int bracePerm;
+    char braceOps[128];
+
+    // Wildcard matching
+    bool didMatch;
     DIR dir;
     FILINFO fi;
     const char* pszBase;
     const char* pszRelBase;
-    const char* pszArg;
 
     // Buffers
+    char szArg[FF_MAX_LFN];
     char sz[FF_MAX_LFN];
     char szAbs[FF_MAX_LFN];
     char szRel[FF_MAX_LFN];

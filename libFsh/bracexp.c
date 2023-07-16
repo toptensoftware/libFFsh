@@ -1,6 +1,7 @@
 #include "common.h"
 #include "bracexp.h"
 #include "utf.h"
+#include "args.h"
 
 // Parse context
 typedef struct 
@@ -14,6 +15,7 @@ typedef struct
     size_t cbOpsUsed;
     int depth;
     int totalDepth;
+    uint32_t* special_chars;
 } CONTEXT;
 
 enum opcode
@@ -117,7 +119,7 @@ OPEXPR* parse_expr(CONTEXT* pctx)
         pExpr->perms += pSeq->perms;
 
         // Next value?
-        if (pctx->cp == ',')
+        if (pctx->cp == pctx->special_chars[SPECIAL_CHAR_COMMA])
         {
             next_char(pctx);
             continue;
@@ -129,7 +131,7 @@ OPEXPR* parse_expr(CONTEXT* pctx)
     }
 
     // Skip closing brace
-    if (pctx->cp == '}')
+    if (pctx->cp == pctx->special_chars[SPECIAL_CHAR_CLOSEBRACE])
         next_char(pctx);
 
     // Reduce depth
@@ -165,12 +167,12 @@ OPSEQ* parse_seq(CONTEXT* pctx)
         // on comma or closing brace
         if (pctx->depth > 0)
         {
-            if (pctx->cp == ',' || pctx->cp == '}')
+            if (pctx->cp == pctx->special_chars[SPECIAL_CHAR_COMMA] || pctx->cp == pctx->special_chars[SPECIAL_CHAR_CLOSEBRACE])
                 break;
         }
 
         // New braced expression?
-        if (pctx->cp == '{')
+        if (pctx->cp == pctx->special_chars[SPECIAL_CHAR_OPENBRACE])
         {
             // Flush text
             if (pctx->pcurr > pUnflushed)
@@ -220,7 +222,7 @@ OPSEQ* parse_seq(CONTEXT* pctx)
 }
 
 
-int bracexp_prepare(const char* psz, void* pBuf, size_t cbBuf)
+int bracexp_prepare(const char* psz, uint32_t* special_chars, void* pBuf, size_t cbBuf)
 {
     // Setup context 
     CONTEXT ctx;
@@ -232,6 +234,7 @@ int bracexp_prepare(const char* psz, void* pBuf, size_t cbBuf)
     ctx.cbOpsUsed = 0;
     ctx.depth = 0;
     ctx.totalDepth = 0;
+    ctx.special_chars = special_chars;
 
     // Setup header
     HEADER* pHeader = (HEADER*)alloc(&ctx, sizeof(HEADER));

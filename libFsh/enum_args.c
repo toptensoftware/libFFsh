@@ -5,6 +5,7 @@
 #include "path.h"
 #include "ffex.h"
 #include "utf.h"
+#include "bracexp.h"
 
 enum state
 {
@@ -12,6 +13,8 @@ enum state
     state_enum_opts = 1,
     state_enum_args = 2,
     state_readdir = 3,
+    state_expand_braces = 4,
+    state_return_arg = 5,
 };
 
 void start_enum_args(ENUM_ARGS* pctx, CMD_CONTEXT* pcmd, ARGS* pargs)
@@ -239,58 +242,6 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
     {
         switch (pctx->state)
         {
-            case state_readdir:
-            {
-                // Read next directory entry
-                int err = f_readdir(&pctx->dir, &pctx->fi);
-                if (err)
-                {
-                    perr("read directory failed: '%s', %s (%i)\n", pctx->pszArg, f_strerror(err), err);
-                    abort_enum_args(pctx, f_maperr(err));
-                    pctx->state = state_enum_args;
-                    break;
-                }
-
-                // End of directory?
-                if (pctx->fi.fname[0] == 0)
-                {
-                    f_closedir(&pctx->dir);
-                    pctx->state = state_enum_args;
-                    break;
-                }
-
-                // Ignore hidden items
-                if (f_is_hidden(&pctx->fi))
-                    break;
-
-                // Does it match pattern?
-                if (!pathglob(pctx->fi.fname, pctx->pszBase, false, special_arg_chars))
-                    break;
-
-                // Work out absolute path
-                strcpy(pctx->szAbs, pctx->sz);
-                pathcat(pctx->szAbs, pctx->fi.fname);
-
-                // Work out relative path
-                if (pctx->pszRelBase)
-                {
-                    size_t len = pctx->pszRelBase - pctx->pszArg;
-                    strncpy(pctx->szRel, pctx->pszArg, len);
-                    pctx->szRel[len] = '\0';
-                    pathcat(pctx->szRel, pctx->fi.fname);
-                }
-                else
-                {
-                    strcpy(pctx->szRel, pctx->fi.fname);
-                }
-
-                // Setup result
-                ppath->pszAbsolute = pctx->szAbs;
-                ppath->pszRelative = pctx->szRel;
-                ppath->pfi = &pctx->fi;
-                return true;
-            }
-
             case state_enum_args:
             {
                 // Any more?
@@ -298,20 +249,47 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                     return false;
 
                 // Get next arg
-                pctx->pszArg = pctx->pargs->argv[pctx->index++];
+                const char* pszArg = pctx->pargs->argv[pctx->index++];
+
+                // Prepare brace expansion
+                pctx->bracePerms = bracexp_prepare(pszArg, special_arg_chars, pctx->braceOps, sizeof(pctx->braceOps));
+                if (pctx->bracePerms < 0)
+                {
+                    perr("brace expansion expression too complex");
+                    abort_enum_args(pctx, -1);
+                    break;
+                }
+
+                // Setup brace perm enumeration
+                if (pctx->bracePerms == 0)
+                    pctx->bracePerms = 1;
+                pctx->bracePerm = 0;
+                pctx->state = state_expand_braces;
+                break;
+
+            case state_expand_braces:
+                // End of enumeration?
+                if (pctx->bracePerm >= pctx->bracePerms)
+                {
+                    pctx->state = state_enum_args;
+                    break;
+                }
+
+                // Expand next perm
+                bracexp_expand(pctx->szArg, pctx->bracePerm++, pctx->braceOps);
 
                 // Get full path
                 strcpy(pctx->sz, pctx->pcmd->cwd);
-                pathcat(pctx->sz, pctx->pszArg);
+                pathcat(pctx->sz, pctx->szArg);
                 pathcan(pctx->sz);
-                if (pathisdir(pctx->pszArg))
+                if (pathisdir(pctx->szArg))
                     pathensuredir(pctx->sz); // Maintain trailing slash
 
                 // Split the full path at last element
                 pctx->pszBase = pathsplit(pctx->sz);
-                pctx->pszRelBase = pathbase(pctx->pszArg);
+                pctx->pszRelBase = pathbase(pctx->szArg);
 
-                // Check no wildcard was in the directory part
+                // Check no wildcard in the directory part
                 if (pathisglob(pctx->sz, special_arg_chars))
                 {
                     perr("wildcards in directory paths not supported: '%s'\n", pctx->sz);
@@ -323,20 +301,28 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                 if (pathisglob(pctx->pszBase, special_arg_chars))
                 {
                     // Enumerate directory
+                    pctx->didMatch = false;
                     int err = f_opendir(&pctx->dir, pctx->sz);
                     if (err)
                     {
-                        perr("find path failed: '%s', %s (%i)\n", pctx->pszArg, f_strerror(err), err);
+                        perr("find path failed: '%s', %s (%i)\n", pctx->szArg, f_strerror(err), err);
                         abort_enum_args(pctx, f_maperr(err));
                         return false;
                     }
                     pctx->state = state_readdir;
                     break;
                 }
+                else
+                {
+                    pctx->state = state_return_arg;
+                }
+                break;
+
+            case state_return_arg:
 
                 // Setup PATHINFO
                 ((char*)pctx->pszBase)[-1] = '/';      // unsplit
-                ppath->pszRelative = pctx->pszArg;
+                ppath->pszRelative = pctx->szArg;
                 ppath->pszAbsolute = pctx->sz;
                 ppath->pfi = NULL;
 
@@ -355,6 +341,75 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                     }
                 }
 
+                pctx->state = state_expand_braces;
+                return true;
+            }
+
+            case state_readdir:
+            {
+                // Read next directory entry
+                int err = f_readdir(&pctx->dir, &pctx->fi);
+                if (err)
+                {
+                    perr("read directory failed: '%s', %s (%i)\n", pctx->szArg, f_strerror(err), err);
+                    abort_enum_args(pctx, f_maperr(err));
+                    pctx->state = state_expand_braces;
+                    break;
+                }
+
+                // End of directory?
+                if (pctx->fi.fname[0] == 0)
+                {
+                    // Close dir
+                    f_closedir(&pctx->dir);
+
+                    // If didn't match any files
+                    if (!pctx->didMatch)
+                    {
+                        // Return the glob pattern as an argument
+                        restore_special_args(pctx->szArg);
+                        pctx->state = state_return_arg;
+                    }
+                    else
+                    {
+                        pctx->state = state_expand_braces;
+                    }
+
+                    break;
+                }
+
+                // Ignore hidden items
+                if (f_is_hidden(&pctx->fi))
+                    break;
+
+                // Does it match pattern?
+                if (!pathglob(pctx->fi.fname, pctx->pszBase, false, special_arg_chars))
+                    break;
+
+                // Remember we matched at least one file
+                pctx->didMatch = true;
+
+                // Work out absolute path
+                strcpy(pctx->szAbs, pctx->sz);
+                pathcat(pctx->szAbs, pctx->fi.fname);
+
+                // Work out relative path
+                if (pctx->pszRelBase)
+                {
+                    size_t len = pctx->pszRelBase - pctx->szArg;
+                    strncpy(pctx->szRel, pctx->szArg, len);
+                    pctx->szRel[len] = '\0';
+                    pathcat(pctx->szRel, pctx->fi.fname);
+                }
+                else
+                {
+                    strcpy(pctx->szRel, pctx->fi.fname);
+                }
+
+                // Setup result
+                ppath->pszAbsolute = pctx->szAbs;
+                ppath->pszRelative = pctx->szRel;
+                ppath->pfi = &pctx->fi;
                 return true;
             }
 
