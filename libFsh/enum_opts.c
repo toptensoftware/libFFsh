@@ -1,4 +1,4 @@
-#include <string.h>
+#include "common.h"
 
 #include "enum_opts.h"
 

@@ -19,3 +19,10 @@ bool f_is_hidden(FILINFO* pfi);
 
 // Copy a file
 int f_copyfile(const char* pszDest, const char* pszSrc, bool optOverwrite);
+
+// Recursively remove a directory
+// psz buffer should be at least FF_MAX_LFN in size
+int f_rmdir_r(char* psz);
+
+// Recursively create a directory
+int f_mkdir_r(const char* psz);

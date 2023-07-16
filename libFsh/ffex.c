@@ -1,7 +1,6 @@
-#include <string.h>
+#include "common.h"
 
 #include "ffex.h"
-
 #include "path.h"
 
 FRESULT f_stat_ex(
@@ -147,3 +146,112 @@ fail:
     f_unlink(pszDest);
     return err;
 }
+
+
+// Recursively remove a directory
+// psz buffer should be at least FF_MAX_LFN in size
+int f_rmdir_r(char* psz)
+{
+    // Otherwise enumerate the directory, deleting all sub items
+    DIR dir;
+    int err = f_opendir(&dir, psz);
+    if (err)
+        return err;
+
+    // Remember end of passed path
+    char* pszEnd = psz + strlen(psz);
+    bool dirOpen = true;
+
+    // Delete all directory entries
+    while (true)
+    {
+        FILINFO fi;
+        int err = f_readdir(&dir, &fi);
+        if (err)
+        {
+            f_closedir(&dir);
+            return err;
+        }
+
+        // Nothing more?
+        if (fi.fname[0] == '\0')
+            break;
+
+        // Get full name
+        pathcat(psz, fi.fname);
+
+        // Delete file, recurse sub-directory
+        if (fi.fattrib & AM_DIR)
+        {
+            err = f_rmdir_r(psz);
+
+            // If too many files error, then close our
+            // directory, remove the sub-directory then
+            // re-open
+            if (err == FR_TOO_MANY_OPEN_FILES)
+            {
+                f_closedir(&dir);
+                dirOpen = false;
+
+                err = f_rmdir_r(psz);
+
+                if (err == 0)
+                {
+                    *pszEnd = '\0';
+                    err = f_opendir(&dir, psz);
+                    dirOpen = err == 0;
+                }
+            }
+        }
+        else
+        {
+            err = f_unlink(psz);
+        }
+
+        *pszEnd = '\0';
+
+        if (err)
+        {
+            if (dirOpen)
+                f_closedir(&dir);
+            return err;
+        }
+    }
+
+    if (dirOpen)
+        f_closedir(&dir);
+
+    // Remove the now empty directory
+    return f_rmdir(psz);
+}
+
+
+
+int f_mkdir_r(const char* psz)
+{
+    // Is it the root directory
+    if (pathisroot(psz))
+        return 0;
+
+    // Try to create it
+    int err = f_mkdir(psz);
+    if (err == 0 || err != FR_NO_PATH)
+        return 0;
+
+    // Find base
+    char* base = (char*)pathbase(psz);
+    if (!base)
+        return ENOENT;
+
+    // Make parent
+    char chSave = base[-1];
+    base[-1] = '\0';
+    err = f_mkdir_r(psz);
+    base[-1] = chSave;
+    if (err)
+        return err;
+
+    // Try again
+    return f_mkdir(psz);
+}
+

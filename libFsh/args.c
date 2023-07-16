@@ -1,5 +1,4 @@
-#include <stdbool.h>
-#include <string.h>
+#include "common.h"
 #include "args.h"
 
 

@@ -1,0 +1,149 @@
+#include "common.h"
+
+#include "commands.h"
+#include "path.h"
+#include "args.h"
+#include "enum_opts.h"
+#include "enum_args.h"
+#include "ffex.h"
+
+int cmd_mv(CMD_CONTEXT* pcmd)
+{
+    bool optOverwrite = true;
+
+    // Process options
+    ENUM_OPTS opts;
+    OPT opt;
+    enum_opts(&opts, pcmd->pargs);
+    while (next_opt(&opts, &opt))
+    {
+        if (strcmp(opt.pszOpt, "-n") == 0 || strcmp(opt.pszOpt, "--no-clobber") == 0)
+        {
+            if (opt.pszValue == NULL)
+            {
+                optOverwrite = false;
+                continue;
+            }
+            else
+            {
+                perr("unexpected value '%s'", opt.pszValue);
+                return -1;
+            }
+        }
+        else
+        {
+            perr("unknown option: '%s'", opt.pszOpt);
+            return -1;            
+        }
+    }
+
+    // Split off target args
+    ARGS argsTarget;
+    if (!split_args(pcmd->pargs, -1, &argsTarget))
+    {
+        perr("no target specified");
+        return -1;
+    }
+
+    // Enum target args
+    char szTarget[FF_MAX_LFN];
+    bool bTargetIsDir = false;
+    szTarget[0] = '\0';
+    ENUM_ARGS args;
+    ARG arg;
+    start_enum_args(&args, pcmd, &argsTarget);
+    while (next_arg(&args, &arg))
+    {
+        if (szTarget[0])
+        {
+            perr("multiple targets specified");
+            abort_enum_args(&args, -1);
+            continue;
+        }
+
+
+        // Store target
+        bTargetIsDir = pathisdir(arg.pszAbsolute) || (arg.pfi != NULL && (arg.pfi->fattrib & AM_DIR) != 0);
+        strcpy(szTarget, arg.pszAbsolute);
+    }
+    int err = end_enum_args(&args);
+    if (err)
+        return err;
+
+    // Remember length of target and check specified
+    char* pszEndTarget = &szTarget[strlen(szTarget)];
+    if (pszEndTarget == szTarget)
+    {
+        perr("no target specified");
+        return -1;
+    }
+
+    // Process args
+    start_enum_args(&args, pcmd, pcmd->pargs);
+    while (next_arg(&args, &arg))
+    {
+        if (arg.pfi == NULL)
+        {
+            perr("no such file or directory: '%s'", arg.pszRelative);
+        }
+        else
+        {
+            // Work out target path
+            if (bTargetIsDir)
+            {
+                *pszEndTarget = '\0';
+                pathcat(szTarget, arg.pfi->fname);
+            }
+
+            // Check if it exists
+            FILINFO fi;
+            err = f_stat(szTarget, &fi);
+            if (err)
+            {
+                if (err != FR_NO_FILE)
+                {
+                    perr(" failed to stat '%s', %s (%i)", szTarget, f_strerror(err), err);
+                    set_enum_args_error(&args, f_maperr(err));
+                    continue;
+                }
+            }
+            else
+            {
+                if (optOverwrite)
+                {
+                    if (fi.fattrib & AM_DIR)
+                    {
+                        perr("can't overwrite '%s' as it's a directory", szTarget);
+                        set_enum_args_error(&args, -1);
+                        continue;
+                    }
+
+                    // Remove target
+                    err = f_unlink(szTarget);
+                    if (err)
+                    {
+                        perr("failed to unlink '%s', %s (%i)", szTarget, f_strerror(err), err);
+                        set_enum_args_error(&args, f_maperr(err));
+                        continue;
+                    }
+                }
+                else
+                {
+                    continue;
+                }
+            }
+
+            // Rename it
+            int err = f_rename(arg.pszAbsolute, szTarget);
+            if (err)
+            {
+                perr("failed to rename '%s' -> '%s', %s (%i)", arg.pszRelative, szTarget, f_strerror(err), err);
+                set_enum_args_error(&args, f_maperr(err));
+            }
+        }
+    }
+
+    return end_enum_args(&args);
+}
+
+
