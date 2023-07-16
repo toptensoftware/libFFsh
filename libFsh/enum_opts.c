@@ -1,16 +1,19 @@
 #include "common.h"
 
 #include "enum_opts.h"
+#include "utf.h"
 
 const char* find_delim(const char* psz)
 {
-    while (*psz)
+    while (true)
     {
-        if (*psz == ':' || *psz == '=')
-            return psz;
-        psz++;
+        const char* pprev = psz;
+        uint32_t cp = utf8_decode(&psz);
+        if (cp == ':' || cp == '=')
+            return pprev;
+        if (cp == 0)
+            return NULL;
     }
-    return NULL;
 }
 
 void enum_opts(ENUM_OPTS* pctx, ARGS* pargs)
@@ -31,24 +34,36 @@ bool next_opt(ENUM_OPTS* pctx, OPT* popt)
         pctx->saveDelim = 0;
     }
 
+decode_short:
     // Continued short name
     if (pctx->pszShort)
     {
-        if (pctx->pszShort[1] == ':' || pctx->pszShort[1] == '=')
+        uint32_t cp = utf8_decode(&pctx->pszShort);
+        if (cp)
         {
-            pctx->szTemp[1] = *pctx->pszShort;
-            popt->pszOpt = pctx->szTemp;
-            popt->pszValue = pctx->pszShort+1;
-            pctx->pszShort = NULL;
-            return true;
-        }
+            // Copy character to temp buffer and terminate it
+            int len = utf8_encode(cp, pctx->szTemp + 1, 4);
+            utf8_encode(0, pctx->szTemp + 1 + len, 4);
 
-        if (*pctx->pszShort)
-        {
-            pctx->szTemp[1] = *pctx->pszShort++;
-            popt->pszOpt = pctx->szTemp;
-            popt->pszValue = NULL;
-            return true;
+            // Get the char after
+            const char* pcur = pctx->pszShort;
+            uint32_t cpNext = utf8_decode(&pctx->pszShort);
+
+            // Value
+            if (cpNext == ':' || cpNext == '=')
+            {
+                popt->pszOpt = pctx->szTemp;
+                popt->pszValue = pctx->pszShort;
+                pctx->pszShort = NULL;
+                return true;
+            }
+            else
+            {
+                popt->pszOpt = pctx->szTemp;
+                popt->pszValue = NULL;
+                pctx->pszShort = pcur;
+                return true;
+            }
         }
 
         pctx->pszShort = NULL;
@@ -57,16 +72,22 @@ bool next_opt(ENUM_OPTS* pctx, OPT* popt)
     while (pctx->index < pctx->pargs->argc)
     {
         const char* pszArg = pctx->pargs->argv[pctx->index++];
+        const char* p = pszArg;
 
         // Switch?
-        if (pszArg[0] != '-')
+        uint32_t cp1 = utf8_decode(&p);
+        if (cp1 != '-')
             continue;
 
         // Remove the argument
         remove_arg(pctx->pargs, pctx->index-1);
         pctx->index--;
 
-        if (pszArg[1] == '-')
+        // Decode the second character
+        const char* pszShort = p;
+        uint32_t cp2 = utf8_decode(&p);
+
+        if (cp2 == '-')
         {
             // Long switch
 
@@ -77,9 +98,10 @@ bool next_opt(ENUM_OPTS* pctx, OPT* popt)
                 // Setup return
                 pctx->saveDelim = *pszDelim;
                 pctx->delimPos = pszDelim;
-                *pszDelim = '\0';
                 popt->pszOpt = pszArg;
-                popt->pszValue = pszDelim + 1;
+                popt->pszValue = pszDelim;
+                utf8_decode(&popt->pszValue);
+                *pszDelim = '\0';
                 return true;
             }
             else
@@ -91,19 +113,8 @@ bool next_opt(ENUM_OPTS* pctx, OPT* popt)
         }
         else
         {
-            pctx->pszShort = pszArg + 1;
-            pctx->szTemp[1] = *pctx->pszShort++;
-            popt->pszOpt = pctx->szTemp;
-            if (*pctx->pszShort == ':' || *pctx->pszShort == '=')
-            {
-                popt->pszValue = pctx->pszShort+1;
-                pctx->pszShort = NULL;
-            }
-            else
-            {
-                popt->pszValue = NULL;
-            }
-            return true;
+            pctx->pszShort = pszShort;
+            goto decode_short;
         }
     }
     return false;
