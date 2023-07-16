@@ -30,5 +30,8 @@ void remove_arg(ARGS* pargs, int position);
 // Split arguments
 bool split_args(ARGS* pargs, int position, ARGS* pTailArgs);
 
-// Restore special characters to their default
-void restore_special_args(char* psz);
+// Restore a special character to it's original non-special version
+uint32_t restore_brace_special_char(uint32_t cp);
+void restore_brace_special_chars(char* psz);
+uint32_t restore_glob_special_char(uint32_t cp);
+void restore_glob_special_chars(char* psz);

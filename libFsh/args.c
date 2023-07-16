@@ -206,26 +206,56 @@ bool split_args(ARGS* pargs, int position, ARGS* pTailArgs)
 }
 
 
-void restore_special_args(char* psz)
+uint32_t restore_brace_special_char(uint32_t cp)
+{
+    if (cp == special_arg_chars[SPECIAL_CHAR_OPENBRACE])
+        return '{';
+    else if (cp == special_arg_chars[SPECIAL_CHAR_CLOSEBRACE])
+        return '}';
+    else if (cp == special_arg_chars[SPECIAL_CHAR_COMMA])
+        return ',';
+    return cp;
+}
+
+
+void restore_brace_special_chars(char* psz)
 {
     char* pDest = psz;
     while (true)
     {
-        uint32_t cp = utf8_decode(&psz);
+        uint32_t cp = utf8_decode((const char**)&psz);
 
-        if (cp == special_arg_chars[SPECIAL_CHAR_STAR])
-            cp = '*';
-        else if (cp == special_arg_chars[SPECIAL_CHAR_QUESTION])
-            cp = '?';
-        else if (cp == special_arg_chars[SPECIAL_CHAR_OPENBRACE])
-            cp = '{';
-        else if (cp == special_arg_chars[SPECIAL_CHAR_CLOSEBRACE])
-            cp = '}';
-        else if (cp == special_arg_chars[SPECIAL_CHAR_COMMA])
-            cp = ',';
+        cp = restore_brace_special_char(cp);
 
         pDest += utf8_encode(cp, pDest, 4);
         if (cp == 0)
             break;
     }
 }
+
+
+uint32_t restore_glob_special_char(uint32_t cp)
+{
+    if (cp == special_arg_chars[SPECIAL_CHAR_STAR])
+        return '*';
+    else if (cp == special_arg_chars[SPECIAL_CHAR_QUESTION])
+        return '?';
+    return cp;
+}
+
+
+void restore_glob_special_chars(char* psz)
+{
+    char* pDest = psz;
+    while (true)
+    {
+        uint32_t cp = utf8_decode((const char**)&psz);
+
+        cp = restore_glob_special_char(cp);
+
+        pDest += utf8_encode(cp, pDest, 4);
+        if (cp == 0)
+            break;
+    }
+}
+

@@ -16,6 +16,7 @@ typedef struct
     int depth;
     int totalDepth;
     uint32_t* special_chars;
+    bool syntaxError;
 } CONTEXT;
 
 enum opcode
@@ -133,6 +134,8 @@ OPEXPR* parse_expr(CONTEXT* pctx)
     // Skip closing brace
     if (pctx->cp == pctx->special_chars[SPECIAL_CHAR_CLOSEBRACE])
         next_char(pctx);
+    else
+        pctx->syntaxError = true;
 
     // Reduce depth
     pctx->depth--;
@@ -235,6 +238,7 @@ int bracexp_prepare(const char* psz, uint32_t* special_chars, void* pBuf, size_t
     ctx.depth = 0;
     ctx.totalDepth = 0;
     ctx.special_chars = special_chars;
+    ctx.syntaxError = false;
 
     // Setup header
     HEADER* pHeader = (HEADER*)alloc(&ctx, sizeof(HEADER));
@@ -254,6 +258,10 @@ int bracexp_prepare(const char* psz, uint32_t* special_chars, void* pBuf, size_t
 
     // If no braces found, return 0 as the total permutation count
     if (ctx.totalDepth == 0)
+        return 0;
+
+    // Syntax error, treat as literal
+    if (ctx.syntaxError)
         return 0;
 
     // Otherwise return the actual permutation count
@@ -306,9 +314,14 @@ void expand(EXPAND_CONTEXT* pctx, int perm, void* pOp);
 
 void expand_text(EXPAND_CONTEXT* pctx, OPTEXT* pOpText)
 {
-    // Copy text to destination buffer and increment position
-    memcpy(pctx->pDest, pctx->psz + pOpText->offset, pOpText->length);
-    pctx->pDest += pOpText->length;
+    const char* p = pctx->psz + pOpText->offset;
+    const char* pszEnd = p + pOpText->length;
+    while (p < pszEnd)
+    {
+        uint32_t cp = utf8_decode(&p);
+        cp = restore_brace_special_char(cp);
+        pctx->pDest += utf8_encode(cp, pctx->pDest, 4);
+    }
 }
 
 void expand_expr(EXPAND_CONTEXT* pctx, int perm, OPEXPR* pOp)

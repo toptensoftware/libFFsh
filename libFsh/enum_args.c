@@ -15,6 +15,7 @@ enum state
     state_readdir = 3,
     state_expand_braces = 4,
     state_return_arg = 5,
+    state_process_arg = 6,
 };
 
 void start_enum_args(ENUM_ARGS* pctx, CMD_CONTEXT* pcmd, ARGS* pargs)
@@ -262,9 +263,16 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
 
                 // Setup brace perm enumeration
                 if (pctx->bracePerms == 0)
-                    pctx->bracePerms = 1;
-                pctx->bracePerm = 0;
-                pctx->state = state_expand_braces;
+                {
+                    strcpy(pctx->szArg, pszArg);
+                    restore_brace_special_chars(pctx->szArg);
+                    pctx->state = state_process_arg;
+                }
+                else
+                {
+                    pctx->bracePerm = 0;
+                    pctx->state = state_expand_braces;
+                }
                 break;
 
             case state_expand_braces:
@@ -277,7 +285,10 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
 
                 // Expand next perm
                 bracexp_expand(pctx->szArg, pctx->bracePerm++, pctx->braceOps);
+                pctx->state = state_process_arg;
+                break;
 
+            case state_process_arg:
                 // Get full path
                 strcpy(pctx->sz, pctx->pcmd->cwd);
                 pathcat(pctx->sz, pctx->szArg);
@@ -367,7 +378,7 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                     if (!pctx->didMatch)
                     {
                         // Return the glob pattern as an argument
-                        restore_special_args(pctx->szArg);
+                        restore_glob_special_chars(pctx->szArg);
                         pctx->state = state_return_arg;
                     }
                     else
