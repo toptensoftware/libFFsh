@@ -368,3 +368,64 @@ bool pathcontains(const char* parent, const char* child, bool caseSensitive)
     }
 }
 
+
+
+bool pathglob(const char* filename, const char* pattern, bool caseSensitive)
+{
+    const char* f = filename;
+    const char* p = pattern;
+
+    // Compare characters
+    while (true)
+    {
+        const char* prevf = f;
+        // Decode a character from each
+        uint32_t cf = utf8_decode(&f);
+        uint32_t cp = utf8_decode(&p);
+
+        // End of both strings = match!
+        if (cp=='\0' && cf=='\0')
+            return true;
+
+        // End of sub-pattern?
+        if (cp=='\0' || cf=='\0')
+            return cp == '*';
+
+        // Single character wildcard
+        if (cp=='?')
+            continue;
+
+        // Multi-character wildcard
+        if (cp=='*')
+        {
+            // If nothing after the wildcard then match
+            const char* prevp = p;
+            cp = utf8_decode(&p);
+            if (cp == '\0')
+                return true;
+
+            p = prevp;
+            f = prevf;
+
+            while (cf != '\0')
+            {
+                if (pathglob(f, p, caseSensitive))
+                    return true;
+
+                cf = utf8_decode(&f);
+            }
+            return false;
+        }
+
+        // Handle case sensitivity
+        if (!caseSensitive)
+        {
+            cp = utf32_toupper(cp);
+            cf = utf32_toupper(cf);
+        }
+
+        // Characters match
+        if (cp != cf)
+            return false;
+    }
+}

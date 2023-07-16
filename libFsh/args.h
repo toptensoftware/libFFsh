@@ -1,5 +1,14 @@
 #pragma once
 
+// These tokens are used to replace unquoted, unescaped
+// characters in the input stream
+#define TOKEN_STAR          '\x01'          // *
+#define TOKEN_QUESTION      '\x02'          // ?
+#define TOKEN_OPENBRACE     '\x03'          // {
+#define TOKEN_CLOSEBRACE    '\x04'          // }
+#define TOKEN_COMMA         '\x05'          // ,
+
+
 // --- Basic argc parsing and helpers ---
 
 // Helper to store argv/argc

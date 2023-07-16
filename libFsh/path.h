@@ -16,3 +16,4 @@ bool pathisdir(const char* path);
 void pathensuredir(char* path);
 bool pathisroot(const char* path);
 bool pathcontains(const char* dir, const char* path, bool caseSensitive);
+bool pathglob(const char* filename, const char* pattern, bool caseSensitive);

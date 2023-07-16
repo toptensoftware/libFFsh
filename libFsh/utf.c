@@ -229,3 +229,21 @@ uint32_t utf32_toupper(uint32_t codepoint)
 
 	return codepoint;
 }
+
+
+uint32_t utf8_init(UTF8* pctx, const char* psz)
+{
+    pctx->codepoint = 1;
+    pctx->pnext = psz;
+    return utf8_next(pctx);
+}
+
+uint32_t utf8_next(UTF8* pctx)
+{
+    if (pctx->codepoint == 0)
+        return 0;
+
+    pctx->pcurr = pctx->pnext;
+    pctx->codepoint = utf8_decode(&pctx->pnext);
+    return pctx->codepoint;
+}

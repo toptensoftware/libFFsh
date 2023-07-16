@@ -7,6 +7,9 @@
 #include "diskio.h"
 #include "../ff15/source/ff.h"
 #include "../libFsh/commands.h"
+#include "../libFsh/path.h"
+#include "../libFsh/bracexp.h"
+#include "../libFsh/enum_opts.h"
 
 void fsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
 {
@@ -37,6 +40,29 @@ void pfn_stdout(void*, char ch)
 
 int main()
 {
+    /*
+    char cl[] = "command -a --sw --arg:XXX -abc -xyz:YYY";
+    int count = count_argv(cl);
+    ARGS args;
+    args.argv = (const char**)alloca(sizeof(char*) * count);
+    parse_argv(cl, &args, count);
+    for (int i=0; i<args.argc; i++)
+    {
+        printf("%i: %s\n", i, args.argv[i]);
+    }
+
+    ENUM_OPTS opts;
+    OPT opt;
+    enum_opts(&opts, &args);
+    while (next_opt(&opts, &opt))
+    {
+        printf("%s %s\n", opt.pszOpt, opt.pszValue ? opt.pszValue : "null");
+    }
+    return 0;
+    */
+    printf("%i\n", is_opt("-a", "-a|--longx"));
+    return 0;
+
     // Initialize disk
     printf("Mounting disk... ");
     int err = disk_mount();
