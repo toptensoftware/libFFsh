@@ -1,6 +1,7 @@
 {
     "files.associations": {
-        "common.h": "c"
+        "common.h": "c",
+        "diskio.h": "c"
     },
     "cmake.configureOnOpen": false
 }

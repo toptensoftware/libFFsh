@@ -1,5 +1,4 @@
-SRCDIR = . ../ff15/source
-EXCLUDESRC += ../ff15/source/diskio.c ../ff15/source/ffsystem.c
+LINKPROJECTS = ../libFsh
 DEFINE += _POSIX_SOURCE
 
 include ../Rules/Rules.mk

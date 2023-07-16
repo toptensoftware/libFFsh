@@ -1,8 +1,9 @@
-#include "common.h"
 #include <stdio.h>
 #include <time.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
+#include "../ff15/source/ff.h"
 #include "../ff15/source/diskio.h"
 
 // FatFS file system object

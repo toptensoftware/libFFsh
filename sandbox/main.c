@@ -1,6 +1,38 @@
-#include "common.h"
-#include "diskio.h"
+#include <stdio.h>
 #include <alloca.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdarg.h>
+
+#include "diskio.h"
+#include "../ff15/source/ff.h"
+#include "../libFsh/commands.h"
+
+void fsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
+{
+    char szTemp[FF_MAX_LFN + 100];
+
+	va_list args;
+	va_start(args, format);
+    vsnprintf(szTemp, sizeof(szTemp), format, args);
+    va_end(args);
+
+    const char* p = szTemp;
+    while (*p)
+    {
+        write(arg, *p++);
+    }
+}
+
+void pfn_stderr(void*, char ch)
+{
+    fputc(ch, stderr);
+}
+
+void pfn_stdout(void*, char ch)
+{
+    fputc(ch, stdout);
+}
 
 
 int main()
@@ -66,6 +98,9 @@ int main()
         CMD_CONTEXT ctx;
         ctx.pargs = &args;
         ctx.cwd = cwd;
+        ctx.user = NULL;
+        ctx.pfn_stderr = pfn_stderr;
+        ctx.pfn_stdout = pfn_stdout;
         cmd(&ctx);
     }
     printf("\n");

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../ff15/source/ff.h"
+#include <ff.h>
 
 #include "commands.h"
 #include "path.h"
