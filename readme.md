@@ -79,10 +79,10 @@ To build libFFsh:
 
 FatFS should be configured with:
 
-* `FF_LFN_UNICODE` - libFFsh assumes all strings are utf8
-* `FF_FS_LOCK` - either 0, or large enough to open all nest directories for recursive file
+* `FF_LFN_UNICODE=2` - libFFsh assumes all strings are utf8
+* `FF_FS_LOCK=8` - either 0, or large enough to open all nest directories for recursive file
   operations + 2 for the source and target file being copied.
-* `FF_FS_READONLY` - 0
+* `FF_FS_READONLY=0`
 
 
 
@@ -164,8 +164,8 @@ void fsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
 {
     char szTemp[FF_MAX_LFN + 100];
 
-	va_list args;
-	va_start(args, format);
+    va_list args;
+    va_start(args, format);
     vsnprintf(szTemp, sizeof(szTemp), format, args);
     va_end(args);
 
