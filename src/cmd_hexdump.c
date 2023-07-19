@@ -7,7 +7,7 @@
 #include "ffex.h"
 #include "parse.h"
 
-void hexdump(CMD_CONTEXT* pcmd, uint32_t offset, const char* buf, int len)
+void hexdump(FFSH_CONTEXT* pcmd, uint32_t offset, const char* buf, int len)
 {
     pout("%08x: ", offset);
 
@@ -42,7 +42,7 @@ void hexdump(CMD_CONTEXT* pcmd, uint32_t offset, const char* buf, int len)
     pout("\n");
 }
 
-int cmd_hexdump(CMD_CONTEXT* pcmd)
+int cmd_hexdump(FFSH_CONTEXT* pcmd)
 {
     uint32_t optSkip = 0;
     uint32_t optLength = 0xFFFFFFFF;

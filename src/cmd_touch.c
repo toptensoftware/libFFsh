@@ -7,7 +7,7 @@
 #include "ffex.h"
 
 
-int cmd_touch(CMD_CONTEXT* pcmd)
+int cmd_touch(FFSH_CONTEXT* pcmd)
 {
     // Process options
     ENUM_ARGS args;

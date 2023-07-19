@@ -10,7 +10,7 @@
 #include "../src/path.h"
 #include "../src/bracexp.h"
 
-void fsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
+void ffsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
 {
     char szTemp[FF_MAX_LFN + 100];
 
@@ -39,29 +39,6 @@ void pfn_stdout(void*, char ch)
 
 int main()
 {
-    /*
-    char cl[] = "command -a --sw --arg:XXX -abc -xyz:YYY";
-    int count = count_argv(cl);
-    ARGS args;
-    args.argv = (const char**)alloca(sizeof(char*) * count);
-    parse_argv(cl, &args, count);
-    for (int i=0; i<args.argc; i++)
-    {
-        printf("%i: %s\n", i, args.argv[i]);
-    }
-
-    ENUM_OPTS opts;
-    OPT opt;
-    enum_opts(&opts, &args);
-    while (next_opt(&opts, &opt))
-    {
-        printf("%s %s\n", opt.pszOpt, opt.pszValue ? opt.pszValue : "null");
-    }
-    return 0;
-    printf("%i\n", is_opt("-a", "-a|--longx"));
-    return 0;
-    */
-
     // Initialize disk
     printf("Mounting disk... ");
     int err = disk_mount();
@@ -99,7 +76,7 @@ int main()
         // Prompt
         printf("%s>", cwd);
 
-        // Get next command
+        // Read command
         char szCommand[512];
         if (!fgets(szCommand, sizeof(szCommand), stdin))
             break;
@@ -108,25 +85,16 @@ int main()
             psz++;
         *psz = '\0';
 
-        // Parse args
-        int argCount = count_argv(szCommand);
-        ARGS args;
-        args.argv = (const char**)alloca(argCount * sizeof(const char*));
-        args.argc = 0;
-        parse_argv(szCommand, &args, argCount);
-
-        // Exit?
-        if (args.argc > 0 && strcmp(args.argv[0], "exit") == 0)
-            break;
-
         // Setup command context
-        CMD_CONTEXT ctx;
-        ctx.pargs = &args;
+        FFSH_CONTEXT ctx;
         ctx.cwd = cwd;
         ctx.user = NULL;
         ctx.pfn_stderr = pfn_stderr;
         ctx.pfn_stdout = pfn_stdout;
-        cmd(&ctx);
+        ffsh_exec(&ctx, szCommand);
+
+        if (ctx.did_exit)
+            break;
     }
     printf("\n");
 

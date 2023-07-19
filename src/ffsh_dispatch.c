@@ -1,22 +1,11 @@
 #include "common.h"
+#include "commands.h"
 
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
-
-
-
-// Invoke a command
-int cmd(CMD_CONTEXT* pcmd)
+// Dispatch a command
+int ffsh_dispatch(FFSH_CONTEXT* pcmd)
 {
-    if (pcmd->pargs->argc < 1)
-        return 0;
-
-    // Save the command and remove it
-    pcmd->cmdname = pcmd->pargs->argv[0];
-    remove_arg(pcmd->pargs, 0);
-
+    pcmd->did_exit = false;
+    
     if (strcmp(pcmd->cmdname, "touch") == 0)
         return cmd_touch(pcmd);
     if (strcmp(pcmd->cmdname, "ls") == 0)
@@ -41,6 +30,8 @@ int cmd(CMD_CONTEXT* pcmd)
         return cmd_cp(pcmd);
     if (strcmp(pcmd->cmdname, "mv") == 0)
         return cmd_mv(pcmd);
+    if (strcmp(pcmd->cmdname, "exit") == 0)
+        return cmd_exit(pcmd);
 
     // pushd
     // popd
@@ -48,3 +39,4 @@ int cmd(CMD_CONTEXT* pcmd)
     perr("Unknown command");
     return 127;
 }
+

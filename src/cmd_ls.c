@@ -6,7 +6,7 @@
 #include "enum_args.h"
 #include "ffex.h"
 
-int cmd_ls_item(CMD_CONTEXT* pcmd, const char* pszRelative, FILINFO* pfi, bool optLong)
+int cmd_ls_item(FFSH_CONTEXT* pcmd, const char* pszRelative, FILINFO* pfi, bool optLong)
 {
 //    if (pszRelative[0] == '.' && (pszRelative[1] == '\\' || pszRelative[1] == '/'))
 //        pszRelative += 2;
@@ -35,7 +35,7 @@ int cmd_ls_item(CMD_CONTEXT* pcmd, const char* pszRelative, FILINFO* pfi, bool o
     return 0;
 }
 
-int cmd_ls_dir(CMD_CONTEXT* pcmd, const char* pszAbsolute, const char* pszRelative, bool optAll, bool optLong)
+int cmd_ls_dir(FFSH_CONTEXT* pcmd, const char* pszAbsolute, const char* pszRelative, bool optAll, bool optLong)
 {
     DIR dir;
     int err = f_opendir(&dir, pszAbsolute);
@@ -73,7 +73,7 @@ int cmd_ls_dir(CMD_CONTEXT* pcmd, const char* pszAbsolute, const char* pszRelati
     return 0;
 }
 
-int cmd_ls(CMD_CONTEXT* pcmd)
+int cmd_ls(FFSH_CONTEXT* pcmd)
 {
     bool optAll = false;
     bool optLong = false;

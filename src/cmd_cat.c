@@ -6,7 +6,7 @@
 #include "enum_args.h"
 #include "ffex.h"
 
-int cmd_cat(CMD_CONTEXT* pcmd)
+int cmd_cat(FFSH_CONTEXT* pcmd)
 {
     // Process options
     ENUM_ARGS args;

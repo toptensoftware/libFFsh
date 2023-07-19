@@ -6,7 +6,7 @@
 #include "enum_args.h"
 #include "ffex.h"
 
-int cmd_mkdir(CMD_CONTEXT* pcmd)
+int cmd_mkdir(FFSH_CONTEXT* pcmd)
 {
     bool makeParents = false;
 

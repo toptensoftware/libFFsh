@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ffsh.h"
+
 // Indicies into special_arg_chars
 #define SPECIAL_CHAR_STAR       0
 #define SPECIAL_CHAR_QUESTION   1
@@ -10,13 +12,6 @@
 extern uint32_t special_arg_chars[];
 
 // --- Basic argc parsing and helpers ---
-
-// Helper to store argv/argc
-typedef struct 
-{
-    const char** argv;
-    int argc;
-} ARGS;
 
 // Count number of args
 int count_argv(char* psz);

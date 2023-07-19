@@ -6,7 +6,7 @@
 #include "enum_args.h"
 #include "ffex.h"
 
-int cmd_rmdir(FFSH_CONTEXT* pcmd)
+int cmd_exit(FFSH_CONTEXT* pcmd)
 {
     // Process options
     ENUM_ARGS args;
@@ -24,16 +24,13 @@ int cmd_rmdir(FFSH_CONTEXT* pcmd)
     ARG arg;
     while (next_arg(&args, &arg))
     {
-        int err = f_rmdir(arg.pszAbsolute);
-        if (err)
-        {
-            const char* pszErr = f_strerror(err);
-            if (err == FR_DENIED)
-                pszErr = "directory not empty";
-            perr("removing '%s', %s (%i)", arg.pszRelative, pszErr, err);
-            set_enum_args_error(&args, f_maperr(err));
-        }
+        perr("too many arguments: '%s'", arg.pszRelative);
     }
-    return end_enum_args(&args);
+    int err = end_enum_args(&args);
+    if (err)
+        return err;
+
+    pcmd->did_exit = true;
+    return 0;
 }
 

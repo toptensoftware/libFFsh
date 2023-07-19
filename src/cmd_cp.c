@@ -7,7 +7,7 @@
 #include "ffex.h"
 
 
-int f_copydir(CMD_CONTEXT* pcmd, const char* pszDest, const char* pszSrc, bool optOverwrite)
+int f_copydir(FFSH_CONTEXT* pcmd, const char* pszDest, const char* pszSrc, bool optOverwrite)
 {
     // Make the target directory
     int err = f_mkdir(pszDest);
@@ -88,7 +88,7 @@ fail:
     return err;
 }
 
-int cmd_cp(CMD_CONTEXT* pcmd)
+int cmd_cp(FFSH_CONTEXT* pcmd)
 {
     bool optRecursive = false;
     bool optOverwrite = true;

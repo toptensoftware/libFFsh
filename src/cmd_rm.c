@@ -6,7 +6,7 @@
 #include "enum_args.h"
 #include "ffex.h"
 
-int cmd_rm(CMD_CONTEXT* pcmd)
+int cmd_rm(FFSH_CONTEXT* pcmd)
 {
     bool optRecursive = false;
 

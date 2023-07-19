@@ -18,7 +18,7 @@ enum state
     state_process_arg = 6,
 };
 
-void start_enum_args(ENUM_ARGS* pctx, CMD_CONTEXT* pcmd, ARGS* pargs)
+void start_enum_args(ENUM_ARGS* pctx, FFSH_CONTEXT* pcmd, ARGS* pargs)
 {
     pctx->pcmd = pcmd;
     pctx->pargs = pargs;
@@ -200,7 +200,7 @@ bool is_switch(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames)
 
     if (popt->pszValue)
     {
-        CMD_CONTEXT* pcmd = pctx->pcmd;
+        FFSH_CONTEXT* pcmd = pctx->pcmd;
         perr("unexpected value passed to '%s'", popt->pszOpt);
         set_enum_args_error(pctx, -1);
         return false;
@@ -216,7 +216,7 @@ bool is_value_opt(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames)
 
     if (!popt->pszValue)
     {
-        CMD_CONTEXT* pcmd = pctx->pcmd;
+        FFSH_CONTEXT* pcmd = pctx->pcmd;
         perr("expected value for '%s'", popt->pszOpt);
         set_enum_args_error(pctx, -1);
         return false;
@@ -228,7 +228,7 @@ bool is_value_opt(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames)
 // Unknown opt handler
 void unknown_opt(ENUM_ARGS* pctx, OPT* popt)
 {
-    CMD_CONTEXT* pcmd = pctx->pcmd;
+    FFSH_CONTEXT* pcmd = pctx->pcmd;
     perr("invalid option: '%s'", popt->pszOpt);
     abort_enum_args(pctx, -1);
 }
@@ -237,7 +237,7 @@ void unknown_opt(ENUM_ARGS* pctx, OPT* popt)
 bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
 {
     // For perr
-    CMD_CONTEXT* pcmd = pctx->pcmd;
+    FFSH_CONTEXT* pcmd = pctx->pcmd;
 
     while (true)
     {

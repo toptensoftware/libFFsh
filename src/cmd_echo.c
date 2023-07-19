@@ -6,7 +6,7 @@
 #include "enum_args.h"
 #include "ffex.h"
 
-int cmd_echo(CMD_CONTEXT* pcmd)
+int cmd_echo(FFSH_CONTEXT* pcmd)
 {
     char szOutFile[FF_MAX_LFN];
     bool optOut = false;

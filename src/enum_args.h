@@ -11,7 +11,7 @@
 // Expand a sequence of paths
 typedef struct
 {
-    CMD_CONTEXT* pcmd;
+    FFSH_CONTEXT* pcmd;
     ARGS* pargs;
 
     int state;
@@ -55,7 +55,7 @@ typedef struct
 } ARG;
 
 // Begins expansion of path arguments
-void start_enum_args(ENUM_ARGS* pctx, CMD_CONTEXT* pcmd, ARGS* pargs);
+void start_enum_args(ENUM_ARGS* pctx, FFSH_CONTEXT* pcmd, ARGS* pargs);
 
 // Get the next option
 bool next_opt(ENUM_ARGS* pctx, OPT* popt);

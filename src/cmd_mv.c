@@ -6,7 +6,7 @@
 #include "enum_args.h"
 #include "ffex.h"
 
-int cmd_mv(CMD_CONTEXT* pcmd)
+int cmd_mv(FFSH_CONTEXT* pcmd)
 {
     bool optOverwrite = true;
 
