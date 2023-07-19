@@ -6,9 +6,9 @@
 
 #include "diskio.h"
 #include "../ff15/source/ff.h"
-#include "../libFsh/commands.h"
-#include "../libFsh/path.h"
-#include "../libFsh/bracexp.h"
+#include "../src/commands.h"
+#include "../src/path.h"
+#include "../src/bracexp.h"
 
 void fsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
 {

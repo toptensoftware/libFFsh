@@ -3,7 +3,8 @@
         "common.h": "c",
         "diskio.h": "c",
         "commands.h": "c",
-        "enum_args.h": "c"
+        "enum_args.h": "c",
+        "bracexp.h": "c"
     },
     "cmake.configureOnOpen": false
 }
