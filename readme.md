@@ -11,6 +11,7 @@ Included commands:
 * `cp [-r|--recursive] [-n|--no-clobber]`
 * `echo [-o|--out:<file>] [-a|--append]`
 * `exit`
+* `false`
 * `hexdump [-s|--skip:<offset>] [-n|--length:<bytes>]`
 * `ls [-a|--all] [-l]]`
 * `mkdir [-p|--parents]`
@@ -18,7 +19,9 @@ Included commands:
 * `pwd`
 * `rm [-r|--recursive]`
 * `rmdir`
+* `sleep (with suffixes 'ms', 's', 'm', 'h', 'd')`
 * `touch`
+* `true`
 
 
 ## Command Processor
@@ -179,6 +182,23 @@ void fsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
 
 If you're providing your own printf formatting core, it should support the following
 format specifiers: `%c`, `%s`, `%i`, `%02i`, `%12i`, `%08x`, `%02x`.
+
+
+### ffsh_sleep
+
+The sleep command implements parsing and totaling of the command line arguments but
+requires an external function `ffsh_sleep(uint32_t millis)` to perform the actual
+sleep operation.
+
+eg: trivial implementation using Linux `usleep` function:
+
+```
+void ffsh_sleep(uint32_t millis)
+{
+    usleep(millis * 1000);
+}
+```
+
 
 
 ### Handling the `exit` command

@@ -63,3 +63,89 @@ bool parse_uint32(const char* p, uint32_t* pValue)
     return true;
 }
 
+
+bool parse_millis(const char* p, uint32_t* pValue)
+{
+    // Skip whitespace
+    while (*p == ' ' || *p == '\t')
+        p++;
+
+    // Must have a digit
+    if ((*p < '0' || *p > '9') && *p != '.')
+        return false;
+
+    // Parse the whole number part
+    uint32_t whole = 0;
+    while (*p >= '0' && *p <= '9')
+    {
+        whole = whole * 10 + (*p - '0');
+        p++;
+    }
+
+    // Parse the fractional part (if present)
+    uint32_t fraction = 0;
+    if (*p == '.')
+    {
+        p++;
+        uint32_t column = 100000;
+        while (*p >= '0' && *p <= '9')
+        {
+            fraction = fraction + column * (*p - '0');
+            column /= 10;
+            p++;
+        }
+    }
+
+    // Handle suffix
+    switch (*p)
+    {
+        case 's':
+            p++;
+            *pValue = whole * 1000 + (fraction / 1000);
+            break;
+
+        case 'm':
+            if (p[1] == 's')
+            {
+                // Milliseconds
+                p+=2;
+                if (fraction >= 500000)
+                    *pValue = whole + 1;
+                else
+                    *pValue = whole; 
+            }
+            else
+            {
+                // Minutes
+                p++;
+                *pValue = whole * 1000 * 60 + (fraction * 60 / 1000);
+            }
+            break;
+
+        case 'h':
+            // Hours
+            p++;
+            *pValue = whole * 1000 * 60 * 60  + (fraction * 60 * 60 / 1000);
+            break;
+
+        case 'd':
+            // Days
+            p++;
+            *pValue = whole * 1000 * 60 * 60 * 24 + (fraction * 60 * 60 * 24 / 1000);
+            break;
+
+        default:
+            // Seconds
+            *pValue = whole * 1000 + (fraction / 1000);
+            break;
+
+    }
+
+    while (*p == ' ' || *p == '\t')
+        p++;
+
+    if (*p)
+        return false;
+
+    return true;
+}

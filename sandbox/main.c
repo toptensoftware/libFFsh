@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdint.h>
+#define __USE_MISC
+#include <unistd.h>
 
 #include "diskio.h"
 #include "../ff15/source/ff.h"
@@ -36,6 +39,10 @@ void pfn_stdout(void*, char ch)
     fputc(ch, stdout);
 }
 
+void ffsh_sleep(uint32_t millis)
+{
+    usleep(millis * 1000);
+}
 
 int main()
 {

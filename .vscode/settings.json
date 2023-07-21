@@ -4,7 +4,8 @@
         "diskio.h": "c",
         "commands.h": "c",
         "enum_args.h": "c",
-        "bracexp.h": "c"
+        "bracexp.h": "c",
+        "unistd.h": "c"
     },
     "cmake.configureOnOpen": false
 }

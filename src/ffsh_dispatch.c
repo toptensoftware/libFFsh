@@ -32,6 +32,12 @@ int ffsh_dispatch(FFSH_CONTEXT* pcmd)
         return cmd_mv(pcmd);
     if (strcmp(pcmd->cmdname, "exit") == 0)
         return cmd_exit(pcmd);
+    if (strcmp(pcmd->cmdname, "sleep") == 0)
+        return cmd_sleep(pcmd);
+    if (strcmp(pcmd->cmdname, "true") == 0)
+        return cmd_true(pcmd);
+    if (strcmp(pcmd->cmdname, "false") == 0)
+        return cmd_false(pcmd);
 
     // pushd
     // popd
