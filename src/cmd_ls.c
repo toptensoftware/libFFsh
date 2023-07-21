@@ -67,7 +67,7 @@ int cmd_ls_dir(FFSH_CONTEXT* pcmd, const char* pszAbsolute, const char* pszRelat
     }
 
     if (anyItems && !optLong)
-        printf("\n");
+        pout("\n");
 
     f_closedir(&dir);
     return 0;
@@ -123,7 +123,7 @@ int cmd_ls(FFSH_CONTEXT* pcmd)
         }
     }
     if (anyitems && !optLong)
-        printf("\n");
+        pout("\n");
     int result = end_enum_args(&args);
 
     if (anydirs)
