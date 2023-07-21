@@ -25,6 +25,8 @@ void start_enum_args(ENUM_ARGS* pctx, FFSH_CONTEXT* pcmd, ARGS* pargs)
     pctx->index = 0;
     pctx->state = state_init;
 
+    pctx->bracePerm = -100;
+
     // Enum opts
     pctx->saveDelim = '\0';
     pctx->pszShort = NULL;
@@ -262,6 +264,7 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                 }
 
                 // Setup brace perm enumeration
+                pctx->bracePerm = 0;
                 if (pctx->bracePerms == 0)
                 {
                     strcpy(pctx->szArg, pszArg);
@@ -270,7 +273,6 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                 }
                 else
                 {
-                    pctx->bracePerm = 0;
                     pctx->state = state_expand_braces;
                 }
                 break;
