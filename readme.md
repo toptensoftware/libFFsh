@@ -47,6 +47,8 @@ All commands also support brace expansion:
 > ls *.{png,jpg,gif}
 ```
 
+Braces sequence expressions (eg: `{1..10}`) aren't supported.
+
 ### Argument Quoting
 
 Any arguments passed inside single or double quotes are treated literally and no 
@@ -74,6 +76,11 @@ eg:
 cd /temp && rm -r *
 ```
 
+The `()` operators can be used to run commands in a subshell:
+
+```
+(cd /subdir && ls -al)
+```
 
 
 ### Other Notes
@@ -107,44 +114,43 @@ FatFS should be configured with:
 ### Invoking a Command
 
 libFFsh doesn't provide an actual shell.  Rather it provides an API through which
-a larger program can invoke commands.  Each command is associated with a `FFSH_CONTEXT`
-which is similar in concept to a process - it has a current working directory, a set of
-command arguments and two outputs - `stdout` and `stderr`
+a larger program can invoke commands.  Each command is associated with a `PROCESS`
+which is similar in concept to an OS process in that it has a current working 
+directory, a set of command arguments and two outputs - `stdout` and `stderr`
 
-To invoke a command simply setup a `FFSH_CONTEXT` and call `ffsh_exec`.
+The following example shows how to setup a process and invoke a command
 
 ```
 // Initialize FatFS
 // Your code here
 
-// Setup current working directory 
-// (NB: cd command will modify this)
-char cwd[FF_MAX_LFN];
-strcpy(cwd, "/");
+const char* pszCommand = "ls -al";
 
-// Setup command context
-FFSH_CONTEXT ctx;
-ctx.cwd = cwd;
-ctx.user = NULL;
-ctx.pfn_stdout = my_stdout_handler;
-ctx.pfn_stderr = my_stderr_handler;
+// Setup process
+struct PROCESS proc;
+process_init(&proc);
+process_set_cwd(&proc, cwd);
+process_set_stderr(&proc, NULL, my_stderr_handler);
+process_set_stdout(&proc, NULL, my_stdout_handler);
 
-// Invoke a command
-char szCommand[] = "ls -al";
-int exitcode = ffsh_exec(szCommand);
+// Invoke command
+process_shell(&proc, pszCommand);
+
+// Save cwd in case changed by `cd` command
+strcpy(cwd, proc.cwd);
+
+// Close process
+process_close(&proc);
 ```
-
-NB: `ffsh_exec` modifies the passed command string buffer (so don't pass a const 
-or literal string).
 
 
 
 ### stdio
 
-libFFsh simulates `stdout` and `stderr` output by calling `FFSH_CONTEXT::pfn_stdout`
-and `FFSH_CONTEXT::pfn_stderr` for each character to be output.
+libFFsh simulates `stdout` and `stderr` output by calling user-defined callback functions.
+These functions are set using the `process_set_stderr` and `process_set_stdout` functions.
 
-A trivial implementation that writes to C `stdout` and `stderr` might look like this:
+A trivial implementation that writes to C-runtime `stdout` and `stderr` might look like this:
 
 ```
 void my_stdout_handler(void* user, char ch)
@@ -158,7 +164,7 @@ void my_stderr_handler(void* user, char ch)
 }
 ```
 
-The `user` parameter is the user defined value passed to `FFSH_CONTEXT::user`.
+The `user` parameter is the user value passed to `process_set_stdout` / `process_set_stderr`.
 
 
 
@@ -219,7 +225,7 @@ void ffsh_sleep(uint32_t millis)
 Since `libFFsh` doesn't implement a command processing loop, it can't automatically
 handle the `exit` command.  
 
-Instead, the built-in `exit` command simply sets `FFSH_CONTEXT::did_exit` flag which
+Instead, the built-in `exit` command simply sets `PROCESS::did_exit` flag which
 can be used by an external command loop to detect the user entering 'exit'.
 
 

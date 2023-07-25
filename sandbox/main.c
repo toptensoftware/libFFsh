@@ -90,19 +90,25 @@ int main()
             psz++;
         *psz = '\0';
 
-        // Setup command context
-        struct PROCESS ctx;
-        process_init(&ctx);
-        process_set_cwd(&ctx, cwd);
-        process_set_stderr(&ctx, NULL, pfn_stderr);
-        process_set_stdout(&ctx, NULL, pfn_stdout);
+        // Setup process
+        struct PROCESS proc;
+        process_init(&proc);
+        process_set_cwd(&proc, cwd);
+        process_set_stderr(&proc, NULL, pfn_stderr);
+        process_set_stdout(&proc, NULL, pfn_stdout);
 
-        process_shell(&ctx, szCommand);
+        // Invoke command
+        process_shell(&proc, szCommand);
 
-        if (ctx.did_exit)
+        // Save cwd in case changed by `cd` command
+        strcpy(cwd, proc.cwd);
+
+        // Close process
+        process_close(&proc);
+
+        if (proc.did_exit)
             break;
 
-        strcpy(cwd, ctx.cwd);
     }
     printf("\n");
 
