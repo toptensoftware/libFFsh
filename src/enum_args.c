@@ -6,6 +6,8 @@
 #include "ffex.h"
 #include "utf.h"
 #include "bracexp.h"
+#include "specialchars.h"
+#include "process.h"
 
 enum state
 {
@@ -18,9 +20,9 @@ enum state
     state_process_arg = 6,
 };
 
-void start_enum_args(ENUM_ARGS* pctx, FFSH_CONTEXT* pcmd, ARGS* pargs)
+void start_enum_args(ENUM_ARGS* pctx, struct PROCESS* proc, struct ARGS* pargs)
 {
-    pctx->pcmd = pcmd;
+    pctx->proc = proc;
     pctx->pargs = pargs;
     pctx->index = 0;
     pctx->state = state_init;
@@ -78,8 +80,8 @@ decode_short:
         {
             // Copy character to temp buffer and terminate it
             pctx->sz[0] = '-';
-            int len = utf8_encode(cp, pctx->sz + 1, 4);
-            utf8_encode(0, pctx->sz + 1 + len, 4);
+            int len = utf8_encode_ex(cp, pctx->sz + 1, 4);
+            utf8_encode_ex(0, pctx->sz + 1 + len, 4);
 
             // Get the char after
             const char* pcur = pctx->pszShort;
@@ -202,7 +204,7 @@ bool is_switch(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames)
 
     if (popt->pszValue)
     {
-        FFSH_CONTEXT* pcmd = pctx->pcmd;
+        struct PROCESS* proc = pctx->proc;
         perr("unexpected value passed to '%s'", popt->pszOpt);
         set_enum_args_error(pctx, -1);
         return false;
@@ -218,7 +220,7 @@ bool is_value_opt(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames)
 
     if (!popt->pszValue)
     {
-        FFSH_CONTEXT* pcmd = pctx->pcmd;
+        struct PROCESS* proc = pctx->proc;
         perr("expected value for '%s'", popt->pszOpt);
         set_enum_args_error(pctx, -1);
         return false;
@@ -230,16 +232,30 @@ bool is_value_opt(ENUM_ARGS* pctx, OPT* popt, const char* pszOptNames)
 // Unknown opt handler
 void unknown_opt(ENUM_ARGS* pctx, OPT* popt)
 {
-    FFSH_CONTEXT* pcmd = pctx->pcmd;
+    struct PROCESS* proc = pctx->proc;
     perr("invalid option: '%s'", popt->pszOpt);
     abort_enum_args(pctx, -1);
 }
+
+static bool direntry_filter(void* user, FILINFO* pfi)
+{
+    // Always ignore hidden
+    if (f_is_hidden(pfi))
+        return false;
+
+    // Does it match pattern?
+    if (!pathglob(pfi->fname, (const char*)user, false, special_chars))
+        return false;
+
+    return true;
+}
+
 
 
 bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
 {
     // For perr
-    FFSH_CONTEXT* pcmd = pctx->pcmd;
+    struct PROCESS* proc = pctx->proc;
 
     while (true)
     {
@@ -255,7 +271,7 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                 const char* pszArg = pctx->pargs->argv[pctx->index++];
 
                 // Prepare brace expansion
-                pctx->bracePerms = bracexp_prepare(pszArg, special_arg_chars, pctx->braceOps, sizeof(pctx->braceOps));
+                pctx->bracePerms = bracexp_prepare(pszArg, special_chars, pctx->braceOps, sizeof(pctx->braceOps));
                 if (pctx->bracePerms < 0)
                 {
                     perr("brace expansion expression too complex");
@@ -292,7 +308,7 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
 
             case state_process_arg:
                 // Get full path
-                strcpy(pctx->sz, pctx->pcmd->cwd);
+                strcpy(pctx->sz, pctx->proc->cwd);
                 pathcat(pctx->sz, pctx->szArg);
                 pathcan(pctx->sz);
                 if (pathisdir(pctx->szArg))
@@ -303,7 +319,7 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                 pctx->pszRelBase = pathbase(pctx->szArg);
 
                 // Check no wildcard in the directory part
-                if (pathisglob(pctx->sz, special_arg_chars))
+                if (pathisglob(pctx->sz, special_chars))
                 {
                     perr("wildcards in directory paths not supported: '%s'\n", pctx->sz);
                     abort_enum_args(pctx, -1);
@@ -311,11 +327,11 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                 }
 
                 // Does it contain wildcards
-                if (pathisglob(pctx->pszBase, special_arg_chars))
+                if (pathisglob(pctx->pszBase, special_chars))
                 {
                     // Enumerate directory
                     pctx->didMatch = false;
-                    int err = f_opendir(&pctx->dir, pctx->sz);
+                    int err = f_opendir_ex(&pctx->direx, pctx->sz, (void*)pctx->pszBase, direntry_filter, direntry_compare_name);
                     if (err)
                     {
                         perr("find path failed: '%s', %s (%i)\n", pctx->szArg, f_strerror(err), err);
@@ -340,18 +356,19 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                 ppath->pfi = NULL;
 
                 // Stat
-                if (f_stat_ex(pctx->sz, &pctx->fi) == FR_OK)
+                FILINFO fi;
+                if (f_stat_ex(pctx->sz, &fi) == FR_OK)
                 {
-                    ppath->pfi = &pctx->fi;
-
                     // If path looks like a directory, but matched a file
                     // then mark it as not found
-                    if (pathisdir(ppath->pszAbsolute) && (pctx->fi.fattrib & AM_DIR)==0)
+                    if (pathisdir(ppath->pszAbsolute) && (fi.fattrib & AM_DIR)==0)
                     {
                         perr("path is not a directory: '%s'\n", ppath->pszRelative);
                         abort_enum_args(pctx, -1);
                         return false;
                     }
+
+                    ppath->pfi = direntry_alloc(&pctx->proc->pool, &fi);
                 }
 
                 pctx->state = state_expand_braces;
@@ -361,20 +378,11 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
             case state_readdir:
             {
                 // Read next directory entry
-                int err = f_readdir(&pctx->dir, &pctx->fi);
-                if (err)
-                {
-                    perr("read directory failed: '%s', %s (%i)\n", pctx->szArg, f_strerror(err), err);
-                    abort_enum_args(pctx, f_maperr(err));
-                    pctx->state = state_expand_braces;
-                    break;
-                }
-
-                // End of directory?
-                if (pctx->fi.fname[0] == 0)
+                DIRENTRY* pde;
+                if (!f_readdir_ex(&pctx->direx, &pde))
                 {
                     // Close dir
-                    f_closedir(&pctx->dir);
+                    f_closedir_ex(&pctx->direx);
 
                     // If didn't match any files
                     if (!pctx->didMatch)
@@ -391,20 +399,12 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                     break;
                 }
 
-                // Ignore hidden items
-                if (f_is_hidden(&pctx->fi))
-                    break;
-
-                // Does it match pattern?
-                if (!pathglob(pctx->fi.fname, pctx->pszBase, false, special_arg_chars))
-                    break;
-
                 // Remember we matched at least one file
                 pctx->didMatch = true;
 
                 // Work out absolute path
                 strcpy(pctx->szAbs, pctx->sz);
-                pathcat(pctx->szAbs, pctx->fi.fname);
+                pathcat(pctx->szAbs, pde->fname);
 
                 // Work out relative path
                 if (pctx->pszRelBase)
@@ -412,17 +412,17 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                     size_t len = pctx->pszRelBase - pctx->szArg;
                     strncpy(pctx->szRel, pctx->szArg, len);
                     pctx->szRel[len] = '\0';
-                    pathcat(pctx->szRel, pctx->fi.fname);
+                    pathcat(pctx->szRel, pde->fname);
                 }
                 else
                 {
-                    strcpy(pctx->szRel, pctx->fi.fname);
+                    strcpy(pctx->szRel, pde->fname);
                 }
 
                 // Setup result
                 ppath->pszAbsolute = pctx->szAbs;
                 ppath->pszRelative = pctx->szRel;
-                ppath->pfi = &pctx->fi;
+                ppath->pfi = pde;
                 return true;
             }
 
@@ -444,7 +444,7 @@ int end_enum_args(ENUM_ARGS* pctx)
 {
     if (pctx->state == state_readdir)
     {
-        f_closedir(&pctx->dir);
+        f_closedir_ex(&pctx->direx);
         pctx->state = state_init;
     }
     return pctx->err;
@@ -467,7 +467,7 @@ void abort_enum_args(ENUM_ARGS* pctx, int err)
     // Abort find file
     if (pctx->state == state_readdir)
     {
-        f_closedir(&pctx->dir);
+        f_closedir_ex(&pctx->direx);
         pctx->state = state_enum_args;
     }
 

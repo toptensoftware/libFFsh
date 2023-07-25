@@ -63,6 +63,19 @@ Backslashes can also be used to escape special characters and spaces:
 > ls path\ with\ spaces
 ```
 
+### Multiple Commands
+
+The operators `&&`, `||` && `;` can be used to group several commands into
+a single command line.
+
+eg:
+
+```
+cd /temp && rm -r *
+```
+
+
+
 ### Other Notes
 
 * There is no support for piping or redirection.

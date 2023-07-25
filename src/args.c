@@ -2,10 +2,7 @@
 #include "utf.h"
 #include "args.h"
 
-uint32_t special_arg_chars[] = {
-    1, 2, 3, 4, 5
-};
-
+/*
 
 bool isWhitespace(uint32_t codepoint)
 {
@@ -15,9 +12,10 @@ bool isWhitespace(uint32_t codepoint)
             codepoint == '\n';
 }
 
+
 int count_argv(char* psz)
 {
-    UTF8 u;
+    struct UTF8 u;
     utf8_init(&u, psz);
 
     int count = 0;
@@ -30,6 +28,29 @@ int count_argv(char* psz)
         // End of string
         if (!u.codepoint)
             break;
+
+
+        if (u.codepoint == '&')
+        {
+            utf8_next(&u);
+            if (u.codepoint == '&')
+            {
+                utf8_next(&u);
+            }
+            count++;
+            continue;
+        }
+
+        if (u.codepoint == '|')
+        {
+            utf8_next(&u);
+            if (u.codepoint == '|')
+            {
+                utf8_next(&u);
+            }
+            count++;
+            continue;
+        }
 
         // Bump count
         count++;
@@ -73,9 +94,15 @@ int count_argv(char* psz)
             // End of arg?
             if (isWhitespace(u.codepoint))
             {
-                utf8_next(&u);
                 break;
             }
+
+            // Special character
+            if (u.codepoint == '&' || u.codepoint == '|')
+            {
+                break;
+            }
+
 
             utf8_next(&u);
         }
@@ -83,14 +110,15 @@ int count_argv(char* psz)
     return count;
 }
 
+
 // Parse a command line
 // Re-uses the psz buffer and overwrites it with the "parsed" strings.
-void parse_argv(char* psz, ARGS* pargs, int maxargc)
+void parse_argv(char* psz, struct ARGS* pargs, int maxargc)
 {
     pargs->argc = 0;
     char* pszDest = psz;
 
-    UTF8 u;
+    struct UTF8 u;
     utf8_init(&u, psz);
 
     while (u.codepoint && pargs->argc < maxargc)
@@ -103,6 +131,40 @@ void parse_argv(char* psz, ARGS* pargs, int maxargc)
         if (!u.codepoint)
             break;
 
+        if (u.codepoint == '&')
+        {
+            utf8_next(&u);
+            if (u.codepoint == '&')
+            {
+                utf8_next(&u);
+                pargs->argv[pargs->argc] = token_logical_and;
+                pargs->argc++;
+            }
+            else
+            {
+                pargs->argv[pargs->argc] = token_bg;
+                pargs->argc++;
+            }
+            continue;
+        }
+
+        if (u.codepoint == '|')
+        {
+            utf8_next(&u);
+            if (u.codepoint == '|')
+            {
+                utf8_next(&u);
+                pargs->argv[pargs->argc] = token_logical_or;
+                pargs->argc++;
+            }
+            else
+            {
+                pargs->argv[pargs->argc] = token_pipe;
+                pargs->argc++;
+            }
+            continue;
+        }
+
         // Store start of string
         pargs->argv[pargs->argc] = pszDest;
         pargs->argc++;
@@ -114,7 +176,7 @@ void parse_argv(char* psz, ARGS* pargs, int maxargc)
                 utf8_next(&u);
                 if (u.codepoint)
                 {
-                    pszDest += utf8_encode(u.codepoint, pszDest, 4);
+                    utf8_encode(u.codepoint, &pszDest);
                 }
                 continue;
             }
@@ -125,7 +187,7 @@ void parse_argv(char* psz, ARGS* pargs, int maxargc)
                 utf8_next(&u);
                 while (u.codepoint && u.codepoint != '\"')
                 {
-                    pszDest += utf8_encode(u.codepoint, pszDest, 4);
+                    utf8_encode(u.codepoint, &pszDest);
                     utf8_next(&u);
                 }
                 utf8_next(&u);
@@ -137,7 +199,7 @@ void parse_argv(char* psz, ARGS* pargs, int maxargc)
                 utf8_next(&u);
                 while (u.codepoint && u.codepoint != '\'')
                 {
-                    pszDest += utf8_encode(u.codepoint, pszDest, 4);
+                    utf8_encode(u.codepoint, &pszDest);
                     utf8_next(&u);
                 }
                 utf8_next(&u);
@@ -151,26 +213,34 @@ void parse_argv(char* psz, ARGS* pargs, int maxargc)
                 break;
             }
 
+            // Special character
+            if (u.codepoint == '&' || u.codepoint == '|')
+            {
+                *pszDest++ = '\0';
+                break;
+            }
+
             // Convert special characters to tokens
             switch (u.codepoint)
             {
-                case '*': u.codepoint = special_arg_chars[SPECIAL_CHAR_STAR]; break;
-                case '?': u.codepoint = special_arg_chars[SPECIAL_CHAR_QUESTION]; break;
-                case '{': u.codepoint = special_arg_chars[SPECIAL_CHAR_OPENBRACE]; break;
-                case '}': u.codepoint = special_arg_chars[SPECIAL_CHAR_CLOSEBRACE]; break;
-                case ',': u.codepoint = special_arg_chars[SPECIAL_CHAR_COMMA]; break;
+                case '*': u.codepoint = special_chars[SPECIAL_CHAR_STAR]; break;
+                case '?': u.codepoint = special_chars[SPECIAL_CHAR_QUESTION]; break;
+                case '{': u.codepoint = special_chars[SPECIAL_CHAR_OPENBRACE]; break;
+                case '}': u.codepoint = special_chars[SPECIAL_CHAR_CLOSEBRACE]; break;
+                case ',': u.codepoint = special_chars[SPECIAL_CHAR_COMMA]; break;
             }
 
             // Other char
-            pszDest += utf8_encode(u.codepoint, pszDest, 4);
+            utf8_encode(u.codepoint, &pszDest);
             utf8_next(&u);
         }
     }
 
     *pszDest = '\0';
 }
+*/
 
-void remove_arg(ARGS* pargs, int position)
+void remove_arg(struct ARGS* pargs, int position)
 {
     // Check valid
     if (position < 0 || position >= pargs->argc)
@@ -184,7 +254,7 @@ void remove_arg(ARGS* pargs, int position)
     pargs->argc--;
 }
 
-bool split_args(ARGS* pargs, int position, ARGS* pTailArgs)
+bool split_args(struct ARGS* pargs, int position, struct ARGS* pTailArgs)
 {
     // Split from end
     if (position < 0)
@@ -205,57 +275,4 @@ bool split_args(ARGS* pargs, int position, ARGS* pTailArgs)
     return true;
 }
 
-
-uint32_t restore_brace_special_char(uint32_t cp)
-{
-    if (cp == special_arg_chars[SPECIAL_CHAR_OPENBRACE])
-        return '{';
-    else if (cp == special_arg_chars[SPECIAL_CHAR_CLOSEBRACE])
-        return '}';
-    else if (cp == special_arg_chars[SPECIAL_CHAR_COMMA])
-        return ',';
-    return cp;
-}
-
-
-void restore_brace_special_chars(char* psz)
-{
-    char* pDest = psz;
-    while (true)
-    {
-        uint32_t cp = utf8_decode((const char**)&psz);
-
-        cp = restore_brace_special_char(cp);
-
-        pDest += utf8_encode(cp, pDest, 4);
-        if (cp == 0)
-            break;
-    }
-}
-
-
-uint32_t restore_glob_special_char(uint32_t cp)
-{
-    if (cp == special_arg_chars[SPECIAL_CHAR_STAR])
-        return '*';
-    else if (cp == special_arg_chars[SPECIAL_CHAR_QUESTION])
-        return '?';
-    return cp;
-}
-
-
-void restore_glob_special_chars(char* psz)
-{
-    char* pDest = psz;
-    while (true)
-    {
-        uint32_t cp = utf8_decode((const char**)&psz);
-
-        cp = restore_glob_special_char(cp);
-
-        pDest += utf8_encode(cp, pDest, 4);
-        if (cp == 0)
-            break;
-    }
-}
 

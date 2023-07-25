@@ -1,18 +1,13 @@
 #include "common.h"
+#include "cmd.h"
 
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
-
-int cmd_mkdir(FFSH_CONTEXT* pcmd)
+int cmd_mkdir(struct PROCESS* proc)
 {
     bool makeParents = false;
 
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
 
     OPT opt;
     while (next_opt(&args, &opt))

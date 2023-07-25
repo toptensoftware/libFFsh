@@ -41,8 +41,12 @@ uint32_t utf8_decode(const char** ptr)
     return codepoint;
 }
 
+void utf8_encode(uint32_t codepoint, char** p)
+{
+    *p += utf8_encode_ex(codepoint, *p, 4);
+}
 
-size_t utf8_encode(uint32_t codepoint, char* p, size_t room)
+size_t utf8_encode_ex(uint32_t codepoint, char* p, size_t room)
 {
     if (codepoint < 0x80)
     {
@@ -231,14 +235,14 @@ uint32_t utf32_toupper(uint32_t codepoint)
 }
 
 
-uint32_t utf8_init(UTF8* pctx, const char* psz)
+uint32_t utf8_init(struct UTF8* pctx, const char* psz)
 {
     pctx->codepoint = 1;
     pctx->pnext = psz;
     return utf8_next(pctx);
 }
 
-uint32_t utf8_next(UTF8* pctx)
+uint32_t utf8_next(struct UTF8* pctx)
 {
     if (pctx->codepoint == 0)
         return 0;
@@ -246,4 +250,32 @@ uint32_t utf8_next(UTF8* pctx)
     pctx->pcurr = pctx->pnext;
     pctx->codepoint = utf8_decode(&pctx->pnext);
     return pctx->codepoint;
+}
+
+int utf8cmpi(const char* a, const char* b)
+{
+    while (1)
+    {
+        uint32_t cpa = utf8_decode(&a);
+        uint32_t cpb = utf8_decode(&b);
+
+        // End of one string?
+        if (!cpa || !cpb)
+        {
+            if (cpa == cpb)
+                return 0;   
+            if (cpa)
+                return 1;
+            else
+                return 0;
+        }
+
+        cpa = utf32_toupper(cpa);
+        cpb = utf32_toupper(cpb);
+
+        if (cpa > cpb)
+            return 1;
+        if (cpa < cpb)
+            return -1;
+    }
 }

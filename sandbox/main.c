@@ -9,9 +9,7 @@
 
 #include "diskio.h"
 #include "../ff15/source/ff.h"
-#include "../src/commands.h"
-#include "../src/path.h"
-#include "../src/bracexp.h"
+#include "../src/ffsh.h"
 
 void ffsh_printf(void (*write)(void*, char), void* arg, const char* format, ...)
 {
@@ -93,15 +91,18 @@ int main()
         *psz = '\0';
 
         // Setup command context
-        FFSH_CONTEXT ctx;
-        ctx.cwd = cwd;
-        ctx.user = NULL;
-        ctx.pfn_stderr = pfn_stderr;
-        ctx.pfn_stdout = pfn_stdout;
-        ffsh_exec(&ctx, szCommand);
+        struct PROCESS ctx;
+        process_init(&ctx);
+        process_set_cwd(&ctx, cwd);
+        process_set_stderr(&ctx, NULL, pfn_stderr);
+        process_set_stdout(&ctx, NULL, pfn_stdout);
+
+        process_shell(&ctx, szCommand);
 
         if (ctx.did_exit)
             break;
+
+        strcpy(cwd, ctx.cwd);
     }
     printf("\n");
 

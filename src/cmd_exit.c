@@ -1,16 +1,11 @@
 #include "common.h"
+#include "cmd.h"
 
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
-
-int cmd_exit(FFSH_CONTEXT* pcmd)
+int cmd_exit(struct PROCESS* proc)
 {
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
 
     OPT opt;
     while (next_opt(&args, &opt))
@@ -30,7 +25,7 @@ int cmd_exit(FFSH_CONTEXT* pcmd)
     if (err)
         return err;
 
-    pcmd->did_exit = true;
+    proc->did_exit = true;
     return 0;
 }
 

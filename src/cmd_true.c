@@ -1,8 +1,7 @@
 #include "common.h"
+#include "cmd.h"
 
-#include "commands.h"
-
-int cmd_true(FFSH_CONTEXT* pcmd)
+int cmd_true(struct PROCESS* proc)
 {
     return 0;
 }

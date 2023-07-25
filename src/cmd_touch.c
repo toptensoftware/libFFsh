@@ -1,17 +1,12 @@
 #include "common.h"
-
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
+#include "cmd.h"
 
 
-int cmd_touch(FFSH_CONTEXT* pcmd)
+int cmd_touch(struct PROCESS* proc)
 {
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
 
     OPT opt;
     while (next_opt(&args, &opt))

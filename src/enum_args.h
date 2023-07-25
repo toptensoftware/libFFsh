@@ -5,14 +5,15 @@
 
 #include "args.h"
 #include "commands.h"
+#include "dirutils.h"
 
 // --- Argument Expansion ---
 
-// Expand a sequence of paths
+// Expand arguments and switches
 typedef struct
 {
-    FFSH_CONTEXT* pcmd;
-    ARGS* pargs;
+    struct PROCESS* proc;
+    struct ARGS* pargs;
 
     int state;
     int index;
@@ -30,8 +31,7 @@ typedef struct
 
     // Wildcard matching
     bool didMatch;
-    DIR dir;
-    FILINFO fi;
+    DIREX direx;
     const char* pszBase;
     const char* pszRelBase;
 
@@ -42,7 +42,8 @@ typedef struct
     char szRel[FF_MAX_LFN];
 } ENUM_ARGS;
 
-typedef struct {
+typedef struct 
+{
     const char* pszOpt;
     const char* pszValue;
 } OPT;
@@ -51,11 +52,11 @@ typedef struct
 {
     const char* pszRelative;
     const char* pszAbsolute;
-    FILINFO* pfi;
+    DIRENTRY* pfi;
 } ARG;
 
 // Begins expansion of path arguments
-void start_enum_args(ENUM_ARGS* pctx, FFSH_CONTEXT* pcmd, ARGS* pargs);
+void start_enum_args(ENUM_ARGS* pctx, struct PROCESS* proc, struct ARGS* pargs);
 
 // Get the next option
 bool next_opt(ENUM_ARGS* pctx, OPT* popt);

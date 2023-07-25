@@ -1,16 +1,12 @@
 #include "common.h"
-
-#include "commands.h"
-#include "args.h"
-#include "enum_args.h"
-#include "parse.h"
+#include "cmd.h"
 
 
-int cmd_sleep(FFSH_CONTEXT* pcmd)
+int cmd_sleep(struct PROCESS* proc)
 {
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
 
     OPT opt;
     while (next_opt(&args, &opt))

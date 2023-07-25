@@ -2,6 +2,7 @@
 #include "bracexp.h"
 #include "utf.h"
 #include "args.h"
+#include "specialchars.h"
 
 // Parse context
 typedef struct 
@@ -320,7 +321,7 @@ void expand_text(EXPAND_CONTEXT* pctx, OPTEXT* pOpText)
     {
         uint32_t cp = utf8_decode(&p);
         cp = restore_brace_special_char(cp);
-        pctx->pDest += utf8_encode(cp, pctx->pDest, 4);
+        utf8_encode(cp, &pctx->pDest);
     }
 }
 

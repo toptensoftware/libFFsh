@@ -1,16 +1,11 @@
 #include "common.h"
+#include "cmd.h"
 
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
-
-int cmd_cd(FFSH_CONTEXT* pcmd)
+int cmd_cd(struct PROCESS* proc)
 {
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
     
     OPT opt;
     while (next_opt(&args, &opt))
@@ -51,6 +46,6 @@ int cmd_cd(FFSH_CONTEXT* pcmd)
     if (enum_args_error(&args))
         return end_enum_args(&args);
 
-    strcpy(pcmd->cwd, newcwd);
+    process_set_cwd(proc, newcwd);
     return 0;
 }

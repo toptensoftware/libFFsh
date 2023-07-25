@@ -1,12 +1,7 @@
 #include "common.h"
+#include "cmd.h"
 
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
-
-int cmd_echo(FFSH_CONTEXT* pcmd)
+int cmd_echo(struct PROCESS* proc)
 {
     char szOutFile[FF_MAX_LFN];
     bool optOut = false;
@@ -15,7 +10,7 @@ int cmd_echo(FFSH_CONTEXT* pcmd)
 
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
     
     OPT opt;
     while (next_opt(&args, &opt))
@@ -27,7 +22,7 @@ int cmd_echo(FFSH_CONTEXT* pcmd)
                 perr("'%s' is a directory", opt.pszValue);
                 abort_enum_args(&args, -1);
             }
-            strcpy(szOutFile, pcmd->cwd);
+            strcpy(szOutFile, proc->cwd);
             pathcat(szOutFile, opt.pszValue);
             pathcan(szOutFile);
             optOut = true;

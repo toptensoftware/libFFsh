@@ -1,12 +1,7 @@
 #include "common.h"
+#include "cmd.h"
 
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
-
-int cmd_ls_item(FFSH_CONTEXT* pcmd, const char* pszRelative, FILINFO* pfi, bool optLong)
+int cmd_ls_item(struct PROCESS* proc, const char* pszRelative, DIRENTRY* pfi, bool optLong)
 {
 //    if (pszRelative[0] == '.' && (pszRelative[1] == '\\' || pszRelative[1] == '/'))
 //        pszRelative += 2;
@@ -35,52 +30,39 @@ int cmd_ls_item(FFSH_CONTEXT* pcmd, const char* pszRelative, FILINFO* pfi, bool 
     return 0;
 }
 
-int cmd_ls_dir(FFSH_CONTEXT* pcmd, const char* pszAbsolute, const char* pszRelative, bool optAll, bool optLong)
+int cmd_ls_dir(struct PROCESS* proc, const char* pszAbsolute, const char* pszRelative, bool optAll, bool optLong)
 {
-    DIR dir;
-    int err = f_opendir(&dir, pszAbsolute);
+    DIREX dir;
+    int err = f_opendir_ex(&dir, pszAbsolute, NULL, optAll ? NULL : direntry_filter_hidden, direntry_compare_name);
     if (err)
     {
         perr("failed to opendir: '%s', %s (%i)", pszRelative, f_strerror(err), err);
         return f_maperr(err);
     }
 
-    FILINFO fi;
+    DIRENTRY* fi;
     bool anyItems = false;
-    while (true)
+    while (f_readdir_ex(&dir, &fi))
     {
-        int err = f_readdir(&dir, &fi);
-        if (err)
-        {
-            perr("failed to readdir: '%s', %s (%i)", pszRelative, f_strerror(err), err);
-            f_closedir(&dir);
-            return f_maperr(err);
-        }
-        if (fi.fname[0] == '\0')
-            break;
-
-        if (optAll || !f_is_hidden(&fi))
-        {
-            cmd_ls_item(pcmd, fi.fname, &fi, optLong);
-            anyItems = true;
-        }
+        cmd_ls_item(proc, fi->fname, fi, optLong);
+        anyItems = true;
     }
 
     if (anyItems && !optLong)
         pout("\n");
 
-    f_closedir(&dir);
+    f_closedir_ex(&dir);
     return 0;
 }
 
-int cmd_ls(FFSH_CONTEXT* pcmd)
+int cmd_ls(struct PROCESS* proc)
 {
     bool optAll = false;
     bool optLong = false;
 
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
 
     OPT opt;
     while (next_opt(&args, &opt))
@@ -111,7 +93,7 @@ int cmd_ls(FFSH_CONTEXT* pcmd)
         {
             if ((arg.pfi->fattrib & AM_DIR) == 0)
             {
-                int err = cmd_ls_item(pcmd, arg.pszRelative, arg.pfi, optLong);
+                int err = cmd_ls_item(proc, arg.pszRelative, arg.pfi, optLong);
                 if (err)
                     set_enum_args_error(&args, err);
                 anyitems = true;
@@ -129,7 +111,7 @@ int cmd_ls(FFSH_CONTEXT* pcmd)
     if (anydirs)
     {
         // Process args (2nd pass list directories)
-        start_enum_args(&args, pcmd, pcmd->pargs);
+        start_enum_args(&args, proc, &proc->args);
         set_enum_args_error(&args, result);
         bool first = !anyitems;
         while (next_arg(&args, &arg))
@@ -141,7 +123,7 @@ int cmd_ls(FFSH_CONTEXT* pcmd)
                 else
                     first = false;
                 pout("%s:\n", arg.pszRelative);
-                int err = cmd_ls_dir(pcmd, arg.pszAbsolute, arg.pszRelative, optAll, optLong);
+                int err = cmd_ls_dir(proc, arg.pszAbsolute, arg.pszRelative, optAll, optLong);
                 if (err)
                     set_enum_args_error(&args, err);
             }
@@ -151,7 +133,7 @@ int cmd_ls(FFSH_CONTEXT* pcmd)
 
     if (!anyargs)
     {
-        result = cmd_ls_dir(pcmd, pcmd->cwd, ".", optAll, optLong);
+        result = cmd_ls_dir(proc, proc->cwd, ".", optAll, optLong);
     }
 
     return result;

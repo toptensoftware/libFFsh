@@ -1,13 +1,8 @@
 #include "common.h"
-
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
+#include "cmd.h"
 
 
-int f_copydir(FFSH_CONTEXT* pcmd, const char* pszDest, const char* pszSrc, bool optOverwrite)
+int f_copydir(struct PROCESS* proc, const char* pszDest, const char* pszSrc, bool optOverwrite)
 {
     // Make the target directory
     int err = f_mkdir(pszDest);
@@ -67,7 +62,7 @@ int f_copydir(FFSH_CONTEXT* pcmd, const char* pszDest, const char* pszSrc, bool 
         if (fi.fattrib & AM_DIR)
         {
             // Recusively copy directory
-            if (f_copydir(pcmd, szTarget, szSource, optOverwrite) != 0)
+            if (f_copydir(proc, szTarget, szSource, optOverwrite) != 0)
                 errFlag = true;
         }
         else
@@ -88,14 +83,14 @@ fail:
     return err;
 }
 
-int cmd_cp(FFSH_CONTEXT* pcmd)
+int cmd_cp(struct PROCESS* proc)
 {
     bool optRecursive = false;
     bool optOverwrite = true;
 
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
     
     OPT opt;
     while (next_opt(&args, &opt))
@@ -111,8 +106,8 @@ int cmd_cp(FFSH_CONTEXT* pcmd)
         return end_enum_args(&args);
 
     // Split off target args
-    ARGS argsTarget;
-    if (!split_args(pcmd->pargs, -1, &argsTarget))
+    struct ARGS argsTarget;
+    if (!split_args(&proc->args, -1, &argsTarget))
     {
         perr("no target specified");
         return -1;
@@ -151,7 +146,7 @@ int cmd_cp(FFSH_CONTEXT* pcmd)
     }
 
     // Process args
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
     while (next_arg(&args, &arg))
     {
         if (arg.pfi == NULL)
@@ -195,7 +190,7 @@ int cmd_cp(FFSH_CONTEXT* pcmd)
                     }
 
                     // Copy directory
-                    int err = f_copydir(pcmd, szTarget, arg.pszAbsolute, optOverwrite);
+                    int err = f_copydir(proc, szTarget, arg.pszAbsolute, optOverwrite);
                     if (err)
                     {
                         perr("failed to copy '%s' -> '%s', %s (%i)", arg.pszRelative, szTarget, f_strerror(err), err);

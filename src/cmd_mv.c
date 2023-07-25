@@ -1,18 +1,13 @@
 #include "common.h"
+#include "cmd.h"
 
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
-
-int cmd_mv(FFSH_CONTEXT* pcmd)
+int cmd_mv(struct PROCESS* proc)
 {
     bool optOverwrite = true;
 
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
 
     OPT opt;
     while (next_opt(&args, &opt))
@@ -26,8 +21,8 @@ int cmd_mv(FFSH_CONTEXT* pcmd)
         return end_enum_args(&args);
 
     // Split off target args
-    ARGS argsTarget;
-    if (!split_args(pcmd->pargs, -1, &argsTarget))
+    struct ARGS argsTarget;
+    if (!split_args(&proc->args, -1, &argsTarget))
     {
         perr("no target specified");
         return -1;
@@ -38,7 +33,7 @@ int cmd_mv(FFSH_CONTEXT* pcmd)
     bool bTargetIsDir = false;
     szTarget[0] = '\0';
     ARG arg;
-    start_enum_args(&args, pcmd, &argsTarget);
+    start_enum_args(&args, proc, &argsTarget);
     while (next_arg(&args, &arg))
     {
         if (szTarget[0])
@@ -65,7 +60,7 @@ int cmd_mv(FFSH_CONTEXT* pcmd)
     }
 
     // Process args
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
     while (next_arg(&args, &arg))
     {
         if (arg.pfi == NULL)

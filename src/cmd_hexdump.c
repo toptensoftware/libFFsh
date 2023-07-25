@@ -1,13 +1,7 @@
 #include "common.h"
+#include "cmd.h"
 
-#include "commands.h"
-#include "path.h"
-#include "args.h"
-#include "enum_args.h"
-#include "ffex.h"
-#include "parse.h"
-
-void hexdump(FFSH_CONTEXT* pcmd, uint32_t offset, const char* buf, int len)
+void hexdump(struct PROCESS* proc, uint32_t offset, const char* buf, int len)
 {
     pout("%08x: ", offset);
 
@@ -42,14 +36,14 @@ void hexdump(FFSH_CONTEXT* pcmd, uint32_t offset, const char* buf, int len)
     pout("\n");
 }
 
-int cmd_hexdump(FFSH_CONTEXT* pcmd)
+int cmd_hexdump(struct PROCESS* proc)
 {
     uint32_t optSkip = 0;
     uint32_t optLength = 0xFFFFFFFF;
 
     // Process options
     ENUM_ARGS args;
-    start_enum_args(&args, pcmd, pcmd->pargs);
+    start_enum_args(&args, proc, &proc->args);
 
     OPT opt;
     while (next_opt(&args, &opt))
@@ -146,7 +140,7 @@ int cmd_hexdump(FFSH_CONTEXT* pcmd)
                     // Output hex
                     while (bufUsed > 16)
                     {
-                        hexdump(pcmd, offset, buf + bufPos, 16);
+                        hexdump(proc, offset, buf + bufPos, 16);
                         bufPos += 16;
                         bufUsed -= 16;
                         offset += 16;
@@ -172,7 +166,7 @@ int cmd_hexdump(FFSH_CONTEXT* pcmd)
 
     if (bufUsed)
     {
-        hexdump(pcmd, offset, buf, bufUsed);
+        hexdump(proc, offset, buf, bufUsed);
     }
 
     return end_enum_args(&args);
