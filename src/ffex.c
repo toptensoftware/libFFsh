@@ -65,7 +65,7 @@ bool f_is_hidden(FILINFO* pfi)
 
 
 // Copy a file
-int f_copyfile(const char* pszDest, const char* pszSrc, bool optOverwrite)
+int f_copyfile(const char* pszDest, const char* pszSrc, bool optOverwrite, void (*progress)())
 {
     // Check destination
     FILINFO fiDest;
@@ -115,6 +115,9 @@ int f_copyfile(const char* pszDest, const char* pszSrc, bool optOverwrite)
         // EOF?
         if (bytes_read < sizeof(buf))
             break;
+
+        if (progress)
+            progress();
     }
 
     // Close files
@@ -150,7 +153,7 @@ fail:
 
 // Recursively remove a directory
 // psz buffer should be at least FF_MAX_LFN in size
-int f_rmdir_r(char* psz)
+int f_rmdir_r(char* psz, void (*progress)())
 {
     // Otherwise enumerate the directory, deleting all sub items
     DIR dir;
@@ -165,6 +168,9 @@ int f_rmdir_r(char* psz)
     // Delete all directory entries
     while (true)
     {
+        if (progress)
+            progress();
+            
         FILINFO fi;
         int err = f_readdir(&dir, &fi);
         if (err)
@@ -183,7 +189,7 @@ int f_rmdir_r(char* psz)
         // Delete file, recurse sub-directory
         if (fi.fattrib & AM_DIR)
         {
-            err = f_rmdir_r(psz);
+            err = f_rmdir_r(psz, progress);
 
             // If too many files error, then close our
             // directory, remove the sub-directory then
@@ -193,7 +199,7 @@ int f_rmdir_r(char* psz)
                 f_closedir(&dir);
                 dirOpen = false;
 
-                err = f_rmdir_r(psz);
+                err = f_rmdir_r(psz, progress);
 
                 if (err == 0)
                 {

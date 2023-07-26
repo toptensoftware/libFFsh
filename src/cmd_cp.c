@@ -64,11 +64,15 @@ int f_copydir(struct PROCESS* proc, const char* pszDest, const char* pszSrc, boo
             // Recusively copy directory
             if (f_copydir(proc, szTarget, szSource, optOverwrite) != 0)
                 errFlag = true;
+
+            // Progress
+            if (proc->progress)
+                proc->progress();
         }
         else
         {
             // Copy file
-            if (f_copyfile(szTarget, szSource, optOverwrite) != 0)
+            if (f_copyfile(szTarget, szSource, optOverwrite, proc->progress) != 0)
                 errFlag = true;
         }
     }
@@ -209,7 +213,7 @@ int cmd_cp(struct PROCESS* proc)
                 }
 
                 // Copy file
-                int err = f_copyfile(szTarget, arg.pszAbsolute, optOverwrite);
+                int err = f_copyfile(szTarget, arg.pszAbsolute, optOverwrite, proc->progress);
                 if (err)
                 {
                     perr("failed to copy '%s' -> '%s', %s (%i)", arg.pszRelative, szTarget, f_strerror(err), err);
