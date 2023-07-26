@@ -37,6 +37,7 @@ static void parse_arg(struct TOKENIZER* tokenizer)
                 if (tokenizer->utf8.codepoint)
                 {
                     encode(tokenizer, tokenizer->utf8.codepoint);
+                    utf8_next(&tokenizer->utf8);
                 }
                 break;
 
