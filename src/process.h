@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "mempool.h"
 #include "args.h"
@@ -65,3 +66,8 @@ void process_set_stderr(struct PROCESS* process, void* user, void (*pfn)(void*,c
 // Parse and execute a shell command
 int process_shell(struct PROCESS* proc, const char* psz);
 
+
+
+void trace(const char* format, ...);
+
+#define TRACE_POINT trace("==> %s %i\n", __FILE__, __LINE__);
