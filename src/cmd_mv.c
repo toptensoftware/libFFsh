@@ -32,9 +32,10 @@ int cmd_mv(struct PROCESS* proc)
     char szTarget[FF_MAX_LFN];
     bool bTargetIsDir = false;
     szTarget[0] = '\0';
+    ENUM_ARGS enum_targets;
     ARG arg;
-    start_enum_args(&args, proc, &argsTarget);
-    while (next_arg(&args, &arg))
+    start_enum_args(&enum_targets, proc, &argsTarget);
+    while (next_arg(&enum_targets, &arg))
     {
         if (szTarget[0])
         {
@@ -48,8 +49,8 @@ int cmd_mv(struct PROCESS* proc)
         bTargetIsDir = pathisdir(arg.pszAbsolute) || (arg.pfi != NULL && (arg.pfi->fattrib & AM_DIR) != 0);
         strcpy(szTarget, arg.pszAbsolute);
     }
-    if (enum_args_error(&args))
-        return end_enum_args(&args);
+    if (enum_args_error(&enum_targets))
+        return end_enum_args(&enum_targets);
 
     // Remember length of target and check specified
     char* pszEndTarget = &szTarget[strlen(szTarget)];

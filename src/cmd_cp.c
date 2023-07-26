@@ -118,8 +118,10 @@ int cmd_cp(struct PROCESS* proc)
     bool bTargetIsDir = false;
     bool bTargetExists = false;
     szTarget[0] = '\0';
+    ENUM_ARGS enum_targets;
     ARG arg;
-    while (next_arg(&args, &arg))
+    start_enum_args(&enum_targets, proc, &argsTarget);
+    while (next_arg(&enum_targets, &arg))
     {
         if (szTarget[0])
         {
@@ -133,9 +135,8 @@ int cmd_cp(struct PROCESS* proc)
         bTargetIsDir = pathisdir(arg.pszAbsolute) || (arg.pfi != NULL && (arg.pfi->fattrib & AM_DIR) != 0);
         strcpy(szTarget, arg.pszAbsolute);
     }
-    int err = end_enum_args(&args);
-    if (err)
-        return err;
+    if (enum_args_error(&enum_targets))
+        return end_enum_args(&enum_targets);
 
     // Remember length of target and check specified
     char* pszEndTarget = &szTarget[strlen(szTarget)];
