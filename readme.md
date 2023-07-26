@@ -9,10 +9,12 @@ Included commands:
 * `cat`
 * `cd`
 * `cp [-r|--recursive] [-n|--no-clobber]`
+* `date`
 * `echo [-o|--out:<file>] [-a|--append]`
 * `exit`
 * `false`
 * `hexdump [-s|--skip:<offset>] [-n|--length:<bytes>]`
+* `label drive: [<newlabel>]`
 * `ls [-a|--all] [-l]]`
 * `mkdir [-p|--parents]`
 * `mv [-n|--no-clobber]`
