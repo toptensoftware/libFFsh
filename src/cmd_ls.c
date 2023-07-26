@@ -30,10 +30,29 @@ int cmd_ls_item(struct PROCESS* proc, const char* pszRelative, DIRENTRY* pfi, bo
     return 0;
 }
 
-int cmd_ls_dir(struct PROCESS* proc, const char* pszAbsolute, const char* pszRelative, bool optAll, bool optLong)
+int cmd_ls_dir(struct PROCESS* proc, const char* pszAbsolute, const char* pszRelative, bool optAll, bool optLong, char optSort, bool optReverse)
 {
+    // Resolve sort function
+    int order = optReverse ? -1 : 1;
+    int (*compare)(void* user, const DIRENTRY* a, const DIRENTRY* b) = NULL;
+    switch (optSort)
+    {
+        case 'n':
+            compare = direntry_compare_name;
+            break;
+
+        case 'S':
+            compare = direntry_compare_size;
+            break;
+
+        case 't':
+            compare = direntry_compare_time;
+            break;
+    }
+
+
     DIREX dir;
-    int err = f_opendir_ex(&dir, pszAbsolute, NULL, optAll ? NULL : direntry_filter_hidden, direntry_compare_name);
+    int err = f_opendir_ex(&dir, pszAbsolute, &order, optAll ? NULL : direntry_filter_hidden, compare);
     if (err)
     {
         perr("failed to opendir: '%s', %s (%i)", pszRelative, f_strerror(err), err);
@@ -59,6 +78,9 @@ int cmd_ls(struct PROCESS* proc)
 {
     bool optAll = false;
     bool optLong = false;
+    bool optDirectories = false;
+    char optSort = 'n';
+    bool optReverse = false;
 
     // Process options
     ENUM_ARGS args;
@@ -71,6 +93,16 @@ int cmd_ls(struct PROCESS* proc)
             optAll = true;
         else if (is_switch(&args, &opt, "-l"))
             optLong = true;
+        else if (is_switch(&args, &opt, "-d|--directories"))
+            optDirectories = true;
+        else if (is_switch(&args, &opt, "-S"))      // Sort by size
+            optSort = 'S';
+        else if (is_switch(&args, &opt, "-t"))      // Sort by time
+            optSort = 't';
+        else if (is_switch(&args, &opt, "-U"))      // Unsorted
+            optSort = 'U';
+        else if (is_switch(&args, &opt, "-r|--reverse"))
+            optReverse = true;
         else
             unknown_opt(&args, &opt);
     }
@@ -91,7 +123,7 @@ int cmd_ls(struct PROCESS* proc)
         }
         else
         {
-            if ((arg.pfi->fattrib & AM_DIR) == 0)
+            if (optDirectories || (arg.pfi->fattrib & AM_DIR) == 0)
             {
                 int err = cmd_ls_item(proc, arg.pszRelative, arg.pfi, optLong);
                 if (err)
@@ -123,7 +155,7 @@ int cmd_ls(struct PROCESS* proc)
                 else
                     first = false;
                 pout("%s:\n", arg.pszRelative);
-                int err = cmd_ls_dir(proc, arg.pszAbsolute, arg.pszRelative, optAll, optLong);
+                int err = cmd_ls_dir(proc, arg.pszAbsolute, arg.pszRelative, optAll, optLong, optSort, optReverse);
                 if (err)
                     set_enum_args_error(&args, err);
             }
@@ -133,7 +165,16 @@ int cmd_ls(struct PROCESS* proc)
 
     if (!anyargs)
     {
-        result = cmd_ls_dir(proc, proc->cwd, ".", optAll, optLong);
+        if (!optDirectories)
+            result = cmd_ls_dir(proc, proc->cwd, ".", optAll, optLong, optSort, optReverse);
+        else
+        {
+            FILINFO fi;
+            f_stat_ex(proc->cwd, &fi);
+            result = cmd_ls_item(proc, ".", direntry_alloc(&proc->pool, &fi), optLong);
+            if (!optLong)
+                pout("\n");
+        }
     }
 
     return result;

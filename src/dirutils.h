@@ -19,6 +19,9 @@ typedef struct
 DIRENTRY* direntry_alloc(struct MEMPOOL* pool, FILINFO* pfi);
 
 int direntry_compare_name(void* user, const DIRENTRY* a, const DIRENTRY* b);
+int direntry_compare_size(void* user, const DIRENTRY* a, const DIRENTRY* b);
+int direntry_compare_time(void* user, const DIRENTRY* a, const DIRENTRY* b);
+
 bool direntry_filter_hidden(void* user, FILINFO* pfi);
 
 typedef struct
