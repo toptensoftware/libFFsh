@@ -29,6 +29,10 @@ void* mempool_alloc(struct MEMPOOL* pool, size_t cb)
     if (cb == 0)
         return NULL;
 
+    // Keep allocations aligned to pointer size
+    if (cb % sizeof(void*))
+        cb += sizeof(void*) - cb % sizeof(void*);
+
     // Try all existing buckets
     struct MEMPOOL_BUCKET* p = pool->first;
     while (p)
