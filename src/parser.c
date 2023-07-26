@@ -153,8 +153,21 @@ struct NODE* parse(struct PROCESS* process, const char* psz)
     tokenizer_init(&parser.tokenizer, &process->pool, psz);
     memstream_initnew(&parser.stream, sizeof(void*) * 32);
 
-    // Parse the root node
-    struct NODE* rootNode = parseExpression(&parser);
+    // Empty command?
+    struct NODE* rootNode;
+    if (parser.tokenizer.token == TOKEN_EOF)
+    {
+        // Create a no-op node
+        struct NODE_NOP* nop = (struct NODE_NOP*)mempool_alloc(parser.pool, sizeof(struct NODE_NOP));
+        nop->type = NODETYPE_NOP;
+        rootNode = (struct NODE*)nop;
+    }
+    else
+    {
+        // Parse the root node
+        rootNode = parseExpression(&parser);
+    }
+
     
     // Clean up
     memstream_close(&parser.stream);

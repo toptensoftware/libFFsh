@@ -144,6 +144,9 @@ static int process_eval_node(struct PROCESS* proc, struct NODE* node)
 {
     switch (node->type)
     {
+        case NODETYPE_NOP:
+            return 0;
+            
         case NODETYPE_COMMAND:
         {
             struct NODE_COMMAND* cmd = (struct NODE_COMMAND*)node;

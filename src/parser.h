@@ -11,9 +11,15 @@ enum NODETYPE
     NODETYPE_LOGICALOR,     // NODE_BINARY
     NODETYPE_GROUP,         // NODE_BINARY
     NODETYPE_SUBSHELL,      // NODE_UNARY
+    NODETYPE_NOP,           // NODE_NOP
 };
 
 struct NODE
+{
+    int type;
+};
+
+struct NODE_NOP
 {
     int type;
 };
