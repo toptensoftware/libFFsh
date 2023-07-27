@@ -33,6 +33,9 @@ struct PROCESS
     // stderr
     void* user_stderr;
     void (*pfn_stderr)(void*,char);
+
+    // Long running commands will call this periodically
+    void (*progress)();
 };
 
 #define printf_stderr(proc, fmt, ...) \
@@ -62,6 +65,9 @@ void process_set_cwd(struct PROCESS* process, const char* cwd);
 // Set STDIO callbacks
 void process_set_stdout(struct PROCESS* process, void* user, void (*pfn)(void*,char));
 void process_set_stderr(struct PROCESS* process, void* user, void (*pfn)(void*,char));
+
+// Progress
+void process_set_progress(struct PROCESS* process, void(*progress)());
 
 // Parse and execute a shell command
 int process_shell(struct PROCESS* proc, const char* psz);

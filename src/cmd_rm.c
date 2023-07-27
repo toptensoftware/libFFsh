@@ -43,7 +43,7 @@ int cmd_rm(struct PROCESS* proc)
             {
                 if (optRecursive)
                 {
-                    int err = f_rmdir_r((char*)arg.pszAbsolute);
+                    int err = f_rmdir_r((char*)arg.pszAbsolute, proc->progress);
                     if (err)
                     {
                         perr("deleting '%s', %s (%i)", arg.pszRelative, f_strerror(err), err);

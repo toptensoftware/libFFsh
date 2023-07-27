@@ -76,6 +76,11 @@ void process_set_stderr(struct PROCESS* process, void* user, void (*pfn)(void*,c
     process->pfn_stderr = pfn;
 }
 
+void process_set_progress(struct PROCESS* process, void(*progress)())
+{
+    process->progress = progress;
+}
+
 struct CMDINFO
 {
     const char* name;
