@@ -71,6 +71,10 @@ int f_opendir_ex(DIREX* direx, const char* pszDir,
     void* compare_ctx, int (*compare)(void* ctx, const DIRENTRY* a, const DIRENTRY* b)
     )
 {
+    // If null or empty directory, assume root.
+    if (pszDir == NULL || *pszDir == '\0')
+        pszDir = "/";
+
     // Check it's a valid directory
     FILINFO stat;
     int err = f_stat_ex(pszDir, &stat);
