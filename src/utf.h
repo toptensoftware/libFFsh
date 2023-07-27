@@ -18,4 +18,5 @@ struct UTF8
 uint32_t utf8_init(struct UTF8* pctx, const char* psz);
 uint32_t utf8_next(struct UTF8* pctx);
 
+int utf8cmpni(const char* a, size_t len_a, const char* b, size_t len_b);
 int utf8cmpi(const char* a, const char* b);

@@ -34,6 +34,12 @@ int cmd_cd(struct PROCESS* proc)
                 if (newcwd[0] == '\0')
                 {
                     strcpy(newcwd, arg.pszAbsolute);
+                    int err = f_realpath(newcwd);
+                    if (err)
+                    {
+                        perr("error resolving real path '%s', %s (%i)", newcwd, f_strerror(err), err);
+                        abort_enum_args(&args, err);
+                    }
                 }
                 else
                 {

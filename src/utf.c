@@ -252,6 +252,41 @@ uint32_t utf8_next(struct UTF8* pctx)
     return pctx->codepoint;
 }
 
+int utf8cmpni(const char* a, size_t len_a, const char* b, size_t len_b)
+{
+    const char* ea = a + len_a;
+    const char* eb = b + len_b;
+
+    while (1)
+    {
+        // End of one string?
+        if (a >= ea || b >= eb)
+        {
+            // End of both strings?
+            if (a >= ea && b >= eb)
+                return 0;   
+
+            if (a >= ea)
+                return -1;
+            else
+                return 0;
+        }
+
+        uint32_t cpa = utf8_decode(&a);
+        uint32_t cpb = utf8_decode(&b);
+
+        cpa = utf32_toupper(cpa);
+        cpb = utf32_toupper(cpb);
+
+        if (cpa > cpb)
+            return 1;
+        if (cpa < cpb)
+            return -1;
+    }
+
+}
+
+
 int utf8cmpi(const char* a, const char* b)
 {
     while (1)

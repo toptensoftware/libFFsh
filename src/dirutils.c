@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "dirutils.h"
 #include "utf.h"
@@ -70,41 +71,82 @@ int f_opendir_ex(DIREX* direx, const char* pszDir,
     void* compare_ctx, int (*compare)(void* ctx, const DIRENTRY* a, const DIRENTRY* b)
     )
 {
-    // Open directory
-    DIR dir;
-    int err = f_opendir(&dir, pszDir);
+    // Check it's a valid directory
+    FILINFO stat;
+    int err = f_stat_ex(pszDir, &stat);
     if (err)
         return err;
 
-    // Initialize mem storage
-    mempool_init(&direx->pool, 4096);
-    memstream_initnew(&direx->stream, 4096);
-    direx->index = 0;
-
-    // Read all entries
-    while (true)
+    // Is it the root directory?
+    if (stat.fattrib & AM_ROOT)
     {
-        // Read next entry
-        FILINFO fi;
-        err = f_readdir(&dir, &fi);
-        if (err)
+        // Initialize mem storage
+        mempool_init(&direx->pool, 4096);
+        memstream_initnew(&direx->stream, 4096);
+        direx->index = 0;
+
+        // Enumerate all volumes
+        char sz[FF_MAX_LFN];
+        for (int i=0; i<FF_VOLUMES; i++)
         {
-            f_closedir_ex(direx);
-            f_closedir(&dir);
-            return err;
+            // Get info on the volume
+            FILINFO fi;
+            strcpy(sz, "/");
+            strcat(sz, VolumeStr[i]);
+            if (f_stat_ex(sz, &fi))
+                continue;
+
+            // Filter unwanted
+            if (filter != NULL && !filter(filter_ctx, &fi))
+                continue;
+
+            // Allocate entry
+            DIRENTRY* pde = direntry_alloc(&direx->pool, &fi);
+
+            // Add to list
+            memstream_write(&direx->stream, &pde, sizeof(pde));
         }
-        if (fi.fname[0] == 0)
-            break;
+    }
+    else
+    {
+        // Open directory
+        DIR dir;
+        int err = f_opendir(&dir, pszDir);
+        if (err)
+            return err;
 
-        // Filter unwanted
-        if (filter != NULL && !filter(filter_ctx, &fi))
-            continue;
+        // Initialize mem storage
+        mempool_init(&direx->pool, 4096);
+        memstream_initnew(&direx->stream, 4096);
+        direx->index = 0;
 
-        // Allocate entry
-        DIRENTRY* pde = direntry_alloc(&direx->pool, &fi);
+        // Read all entries
+        while (true)
+        {
+            // Read next entry
+            FILINFO fi;
+            err = f_readdir(&dir, &fi);
+            if (err)
+            {
+                f_closedir_ex(direx);
+                f_closedir(&dir);
+                return err;
+            }
+            if (fi.fname[0] == 0)
+                break;
 
-        // Add to list
-        memstream_write(&direx->stream, &pde, sizeof(pde));
+            // Filter unwanted
+            if (filter != NULL && !filter(filter_ctx, &fi))
+                continue;
+
+            // Allocate entry
+            DIRENTRY* pde = direntry_alloc(&direx->pool, &fi);
+
+            // Add to list
+            memstream_write(&direx->stream, &pde, sizeof(pde));
+        }
+
+        f_closedir(&dir);
     }
 
     if (compare != NULL)
@@ -116,7 +158,6 @@ int f_opendir_ex(DIREX* direx, const char* pszDir,
         g_compare_ctx = NULL;
     }
 
-    f_closedir(&dir);
     return 0;
 }
 

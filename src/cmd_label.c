@@ -19,20 +19,30 @@ int cmd_label(struct PROCESS* proc)
     ARG arg;
     bool haveDrive = false;
     bool haveNewLabel = false;
+    char szVolume[FF_MAX_LFN];
     char szArgs[FF_MAX_LFN];
     while (next_arg(&args, &arg))
     {
         if (!haveDrive)
         {
-            const char* pathPart = pathskipdrive(arg.pszRelative);
-            if (pathPart == NULL || pathPart[0] != '\0')
+            if (arg.pfi == NULL || (arg.pfi->fattrib & AM_DRIVE)==0)
             {
-                perr("not a valid drive specifier '%s'", arg.pszRelative);
-                set_enum_args_error(&args, -1);
+                perr("not a valid volume '%s'", arg.pszRelative);
+                abort_enum_args(&args, -1);
                 continue;
             }
 
-            strcpy(szArgs, arg.pszRelative);
+            strcpy(szVolume, arg.pszAbsolute);
+            int err = f_realpath(szVolume);
+            if (err)
+            {
+                perr("error resolving realpath '%s', %s (%i)", szVolume, f_strerror(err), err);
+                abort_enum_args(&args, err);
+                continue;
+            }
+            szArgs[0] = arg.pfi->fsize + '0';   // Logical drive number in fsize
+            szArgs[1] = ':';
+            szArgs[2] = '\0';
             haveDrive = true;
         }
         else if (!haveNewLabel)
@@ -60,14 +70,14 @@ int cmd_label(struct PROCESS* proc)
     {
         DWORD serial;
         char szLabel[FF_MAX_LFN];
-        int err = f_getlabel(szArgs, szLabel, &serial);
+        int err = f_getlabel(szVolume, szLabel, &serial);
         if (err)
         {
-            perr("error getting label for '%s' %s (%i)", arg.pszRelative, f_strerror(err), err);
+            perr("error getting label for '%s' %s (%i)", szArgs, f_strerror(err), err);
             return err;
         }
 
-        pout("%s %04X-%04X %s\n", arg.pszRelative, serial >> 16, serial & 0xFFFF, szLabel);
+        pout("%s %04X-%04X %s\n", szVolume, serial >> 16, serial & 0xFFFF, szLabel);
     }
     else
     {

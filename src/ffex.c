@@ -2,22 +2,81 @@
 
 #include "ffex.h"
 #include "path.h"
+#include "utf.h"
 
+extern const char* VolumeStr[FF_VOLUMES];
+
+// Assumes canonicalized path
 FRESULT f_stat_ex(
     const TCHAR* path,	/* Pointer to the file path */
 	FILINFO* fno		/* Pointer to file information to return */
 )
 {
-    if (pathisroot(path))
+    struct UTF8 u;
+    utf8_init(&u, path);
+
+    // Must start with slash
+    if (u.codepoint != '/' && u.codepoint != '\\')
+        return FR_INVALID_NAME;
+    utf8_next(&u);
+    
+    // Is it the root directory
+    if (u.codepoint == '\0')
     {
         fno->fdate = 0;
         fno->ftime = 0;
         fno->fsize = 0;
-        fno->fattrib = AM_DIR;
+        fno->fattrib = AM_DIR | AM_ROOT;
         strcpy(fno->fname, "/");
         return FR_OK;
     }
 
+    // Parse the drive name
+    const char* pszDriveStart = u.pcurr;
+    while (u.codepoint != '/' && u.codepoint != '\\' && u.codepoint != '\0')
+        utf8_next(&u);
+    const char* pszDriveEnd = (const char*)u.pcurr;
+
+    // Missing drive name
+    if (pszDriveStart == pszDriveEnd)
+        return FR_INVALID_NAME;
+
+    // Check it's a valid drive
+    int ld = -1;
+    for (int i=0; i<FF_VOLUMES; i++)
+    {
+        // Ignore blank volume strings
+        if (VolumeStr[i] == NULL)
+            continue;
+        if (VolumeStr[i][0] == '\0')
+            continue;
+
+        if (utf8cmpni(pszDriveStart, pszDriveEnd-pszDriveStart, VolumeStr[i], strlen(VolumeStr[i])) == 0)
+        {
+            ld = i;
+            break;
+        }
+    }
+    if (ld < 0)
+        return FR_INVALID_DRIVE;
+
+    // Skip possible trailing slash
+    if (u.codepoint != '\0')
+        utf8_next(&u);
+
+    // Is it a drive letter?
+    if (u.codepoint == '\0')
+    {
+        fno->fdate = 0;
+        fno->ftime = 0;
+        fno->fsize = ld;
+        fno->fattrib = AM_DIR | AM_DRIVE;
+        strncpy(fno->fname, pszDriveStart, pszDriveEnd - pszDriveStart);
+        fno->fname[pszDriveEnd - pszDriveStart] = '\0';
+        return FR_OK;
+    }
+
+    // Otherwise, do default
     return f_stat(path, fno);
 }
 
@@ -261,3 +320,52 @@ int f_mkdir_r(const char* psz)
     return f_mkdir(psz);
 }
 
+
+
+int f_realpath(char* psz)
+{
+    // First canonicalize it
+    pathcan(psz);
+
+    // Next stat all elements
+    char sz[FF_MAX_LFN];
+    char* pd = sz;
+
+    // Process parts
+    struct UTF8 u;
+    utf8_init(&u, psz);
+
+    while (u.codepoint == '/')
+    {
+        // Slash
+        *pd++ = '/';
+        utf8_next(&u);
+
+        if (u.codepoint == '\0')
+            break;
+
+        // Find end of part
+        while (u.codepoint != '/' && u.codepoint)
+            utf8_next(&u);
+
+        // Terminate at end of part
+        char save = *u.pcurr;
+        *(char*)u.pcurr = '\0';        
+
+        // Stat this part
+        FILINFO fi;
+        int err = f_stat_ex(psz, &fi);
+        *(char*)u.pcurr = save;
+        if (err)
+            return err;
+
+        // Append to real path
+        strcpy(pd, fi.fname);
+        pd += strlen(fi.fname);
+    }
+
+    *pd = '\0';
+
+    strcpy(psz, sz);
+    return 0;
+}

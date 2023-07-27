@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-const char* pathskipdrive(const char* path);
+//const char* pathskipdrive(const char* path);
 const char* pathtail(const char* path);
 const char* pathbase(const char* path);
 void pathdir(const char* path, char* dir);

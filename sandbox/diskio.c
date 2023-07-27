@@ -10,6 +10,9 @@
 FATFS g_fs;
 FILE* g_pFile = NULL;
 
+const char* VolumeStr[FF_VOLUMES] = {"sd"};
+
+
 DSTATUS disk_initialize(BYTE pdrv)
 {
     int fd = open("disk.fat", O_RDWR | O_CREAT, 0666);

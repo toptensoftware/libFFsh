@@ -3,6 +3,7 @@
 #include "path.h"
 #include "utf.h"
 
+/*
 // Check for characters allows in the "drive:" part of path
 bool isDriveChar(uint32_t ch)
 {
@@ -37,6 +38,8 @@ const char* pathskipdrive(const char* path)
         }
     }
 }
+
+*/
 
 // Find the last separator in a path
 const char* pathtail(const char* path)
@@ -108,8 +111,11 @@ char* pathcat(char* path1, const char* path2)
         return path1;
 
     // Absolute path?
+    /*
     const char* pszSkipDrive = pathskipdrive(path2);
     if (pszSkipDrive != path2 || *pszSkipDrive == '\\' || *pszSkipDrive == '/')
+    */
+    if (*path2 == '\\' || *path2 == '/')
     {
         strcpy(path1, path2);
         return path1;
@@ -175,7 +181,7 @@ char* pathsplitext(char* path)
 char* pathcan(char* path)
 {
     // Skip the drive letter
-    path = (char*)pathskipdrive(path);
+    //path = (char*)pathskipdrive(path);
 	char* ps = path;
 	char* pd = path;
 
@@ -290,7 +296,7 @@ void pathensuredir(char* path)
 // Check if path is the root path
 bool pathisroot(const char* path)
 {
-    path = pathskipdrive(path);
+    //path = pathskipdrive(path);
     uint32_t cp = utf8_decode(&path);
     return (cp == '/' || cp == '\\') && utf8_decode(&path) == '\0';
 }
