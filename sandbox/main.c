@@ -42,6 +42,11 @@ void ffsh_sleep(uint32_t millis)
     usleep(millis * 1000);
 }
 
+void ffsh_reboot()
+{
+    printf("Rebooting... (can't)\n");
+}
+
 int main()
 {
     // Initialize disk

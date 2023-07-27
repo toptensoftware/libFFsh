@@ -9,6 +9,7 @@
 
 void ffsh_printf(void (*write)(void*, char), void* arg, const char* format, ...);
 void ffsh_sleep(uint32_t millis);
+void ffsh_reboot();
 
 struct PROCESS
 {

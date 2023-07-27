@@ -16,6 +16,7 @@ int cmd_ls(struct PROCESS* proc);
 int cmd_mkdir(struct PROCESS* proc);
 int cmd_mv(struct PROCESS* proc);
 int cmd_pwd(struct PROCESS* proc);
+int cmd_reboot(struct PROCESS* proc);
 int cmd_rm(struct PROCESS* proc);
 int cmd_rmdir(struct PROCESS* proc);
 int cmd_sleep(struct PROCESS* proc);

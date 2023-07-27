@@ -103,6 +103,7 @@ struct CMDINFO g_cmdtable[] = {
     COMMAND(mkdir),
     COMMAND(mv),
     COMMAND(pwd),
+    COMMAND(reboot),
     COMMAND(rm),
     COMMAND(rmdir),
     COMMAND(sleep),
