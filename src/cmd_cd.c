@@ -47,6 +47,11 @@ int cmd_cd(struct PROCESS* proc)
                     abort_enum_args(&args, -1);
                 }
             }
+            else
+            {
+                perr("'%s', not a directory", arg.pszRelative);
+                abort_enum_args(&args, -1);
+            }
         }
     }
     if (enum_args_error(&args))
