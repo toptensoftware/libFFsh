@@ -20,8 +20,34 @@ static void* g_user;
 
 int direntry_compare_name(void* user, const DIRENTRY* a, const DIRENTRY* b)
 {
-    return utf8cmpi(a->fname, b->fname);
+    int order = user == NULL ? 1 : *(int*)user;
+    return utf8cmpi(a->fname, b->fname) * order;
 }
+
+int direntry_compare_size(void* user, const DIRENTRY* a, const DIRENTRY* b)
+{
+    int order = user == NULL ? 1 : *(int*)user;
+    if (a->fsize > b->fsize)
+        return 1 * order;
+    if (a->fsize < b->fsize)
+        return -1 * order;
+    return direntry_compare_name(user, a, b);
+}
+
+int direntry_compare_time(void* user, const DIRENTRY* a, const DIRENTRY* b)
+{
+    int order = user == NULL ? 1 : *(int*)user;
+    if (a->fdate > b->fdate)
+        return 1 * order;
+    if (a->fdate < b->fdate)
+        return -1 * order;
+    if (a->ftime > b->ftime)
+        return 1 * order;
+    if (a->ftime < b->ftime)
+        return -1 * order;
+    return direntry_compare_name(user, a, b);
+}
+
 
 bool direntry_filter_hidden(void* user, FILINFO* pfi)
 {
