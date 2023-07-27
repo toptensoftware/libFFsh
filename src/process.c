@@ -13,7 +13,7 @@ void write_null(void* user, char ch)
 }
 
 // Initialize a new process
-void process_init(struct PROCESS* process)
+void process_init(struct PROCESS* process, bool (*dispatch)(struct PROCESS*))
 {
     process->cwd = NULL;
     process->user_stderr = NULL;
@@ -23,6 +23,7 @@ void process_init(struct PROCESS* process)
     process->pfn_stderr = write_null;
     process->user_stdout = NULL;
     process->pfn_stdout = write_null;
+    process->dispatch_command = dispatch;
     mempool_init(&process->pool, 4096);
     process_set_cwd(process, "/");
 }
@@ -37,6 +38,7 @@ void process_dup(struct PROCESS* process, const struct PROCESS* from)
     process->pfn_stderr = from->pfn_stderr;
     process->user_stdout = from->user_stdout;
     process->pfn_stdout = from->pfn_stdout;
+    process->dispatch_command = from->dispatch_command;
     mempool_init(&process->pool, 4096);
     process_set_cwd(process, from->cwd);
 }
@@ -81,36 +83,22 @@ void process_set_progress(struct PROCESS* process, void(*progress)())
     process->progress = progress;
 }
 
-struct CMDINFO
+// Invoke a command from a command table
+bool process_dispatch(struct PROCESS* proc, struct CMDINFO command_table[])
 {
-    const char* name;
-    int (*pfn_cmd)(struct PROCESS* proc);
-};
+    const struct CMDINFO* pci = command_table;
+    while (pci->name)
+    {
+        if (strcmp(pci->name, proc->cmdname) == 0)
+        {
+            proc->exitcode = pci->pfn_cmd(proc);
+            return true;
+        }
+        pci++;
+    }
 
-#define COMMAND(name) { #name, cmd_ ## name }
-
-struct CMDINFO g_cmdtable[] = {
-    COMMAND(cat),
-    COMMAND(cd),
-    COMMAND(cp),
-    COMMAND(date),
-    COMMAND(echo),
-    COMMAND(exit),
-    COMMAND(false),
-    COMMAND(hexdump),
-    COMMAND(label),
-    COMMAND(ls),
-    COMMAND(mkdir),
-    COMMAND(mv),
-    COMMAND(pwd),
-    COMMAND(reboot),
-    COMMAND(rm),
-    COMMAND(rmdir),
-    COMMAND(sleep),
-    COMMAND(touch),
-    COMMAND(true),
-};
-
+    return false;
+}
 
 // Dispatch a command
 int process_invoke(struct PROCESS* proc, struct ARGS* pargs)
@@ -129,17 +117,11 @@ int process_invoke(struct PROCESS* proc, struct ARGS* pargs)
     proc->args = *pargs;
 
     // Dispatch command
-    for (int i=0; i<sizeof(g_cmdtable) / sizeof(g_cmdtable[0]); i++)
-    {
-        struct CMDINFO* cmd = &g_cmdtable[i];
-        if (strcmp(cmd->name, proc->cmdname) == 0)
-        {
-            return cmd->pfn_cmd(proc);
-        }
-    }
+    if (proc->dispatch_command(proc))
+        return proc->exitcode;
 
     // Unknown command
-    printf_stderr(proc, "Unknown command\n");
+    printf_stderr(proc, "shell: unknown command\n");
     return 127;
 }
 
@@ -194,6 +176,7 @@ static int process_eval_node(struct PROCESS* proc, struct NODE* node)
     assert(false);
     return 0;
 }
+
 
 int process_shell(struct PROCESS* proc, const char* psz)
 {

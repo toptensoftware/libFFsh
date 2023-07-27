@@ -9,7 +9,14 @@
 
 void ffsh_printf(void (*write)(void*, char), void* arg, const char* format, ...);
 void ffsh_sleep(uint32_t millis);
-void ffsh_reboot();
+
+struct PROCESS;
+
+struct CMDINFO
+{
+    const char* name;
+    int (*pfn_cmd)(struct PROCESS* proc);
+};
 
 struct PROCESS
 {
@@ -24,8 +31,14 @@ struct PROCESS
     const char* cmdname;
     struct ARGS args;
 
+    // Exit code from last invoked command
+    int exitcode;
+
     // True if exit command invoked
     bool did_exit;
+
+    // Table of available commands
+    bool (*dispatch_command)(struct PROCESS* proc);
 
     // stdout
     void* user_stdout;
@@ -52,7 +65,7 @@ struct PROCESS
     printf_stdout(proc, fmt, ##__VA_ARGS__)
 
 // Initialize a new process
-void process_init(struct PROCESS* process);
+void process_init(struct PROCESS* process, bool (*dispatch)(struct PROCESS*));
 
 // Initialize a new process with same env as another
 void process_dup(struct PROCESS* process, const struct PROCESS* from);
@@ -69,6 +82,12 @@ void process_set_stderr(struct PROCESS* process, void* user, void (*pfn)(void*,c
 
 // Progress
 void process_set_progress(struct PROCESS* process, void(*progress)());
+
+// Dispatch a command
+int process_invoke(struct PROCESS* proc, struct ARGS* pargs);
+
+// Dispatch a command from a command table
+bool process_dispatch(struct PROCESS* proc, struct CMDINFO command_table[]);
 
 // Parse and execute a shell command
 int process_shell(struct PROCESS* proc, const char* psz);

@@ -5,7 +5,8 @@
         "commands.h": "c",
         "enum_args.h": "c",
         "bracexp.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "ffsh.h": "c"
     },
     "cmake.configureOnOpen": false
 }

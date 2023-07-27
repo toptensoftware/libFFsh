@@ -1,5 +1,6 @@
-#include "common.h"
-#include "cmd.h"
+#include "../src/ffsh.h"
+
+extern void ffsh_reboot();
 
 int cmd_reboot(struct PROCESS* proc)
 {

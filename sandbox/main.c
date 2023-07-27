@@ -47,6 +47,20 @@ void ffsh_reboot()
     printf("Rebooting... (can't)\n");
 }
 
+int cmd_reboot(struct PROCESS* proc);
+
+START_COMMAND_TABLE(my_command_table)
+    COMMAND(reboot)
+END_COMMAND_TABLE
+
+bool my_dispatch_command(struct PROCESS* proc)
+{
+    if (process_dispatch(proc, my_command_table))
+        return true;
+
+    return dispatch_builtin_command(proc);
+}
+
 int main()
 {
     // Initialize disk
@@ -97,7 +111,7 @@ int main()
 
         // Setup process
         struct PROCESS proc;
-        process_init(&proc);
+        process_init(&proc, my_dispatch_command);
         process_set_cwd(&proc, cwd);
         process_set_stderr(&proc, NULL, pfn_stderr);
         process_set_stdout(&proc, NULL, pfn_stdout);
