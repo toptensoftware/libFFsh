@@ -52,7 +52,7 @@ int cmd_ls_dir(struct PROCESS* proc, const char* pszAbsolute, const char* pszRel
 
 
     DIREX dir;
-    int err = f_opendir_ex(&dir, pszAbsolute, &order, optAll ? NULL : direntry_filter_hidden, compare);
+    int err = f_opendir_ex(&dir, pszAbsolute, NULL, optAll ? NULL : direntry_filter_hidden, &order, compare);
     if (err)
     {
         perr("failed to opendir: '%s', %s (%i)", pszRelative, f_strerror(err), err);
@@ -120,6 +120,7 @@ int cmd_ls(struct PROCESS* proc)
         if (!arg.pfi)
         {
             perr("no such file or directory: '%s'", arg.pszRelative);
+            set_enum_args_error(&args, ENOENT);
         }
         else
         {

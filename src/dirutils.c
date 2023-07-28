@@ -15,28 +15,28 @@ DIRENTRY* direntry_alloc(struct MEMPOOL* pool, FILINFO* pfi)
     return pde;
 }
 
-static int (*g_compare)(void* user, const DIRENTRY* a, const DIRENTRY* b);
-static void* g_user;
+static int (*g_compare)(void* ctx, const DIRENTRY* a, const DIRENTRY* b);
+static void* g_compare_ctx;
 
-int direntry_compare_name(void* user, const DIRENTRY* a, const DIRENTRY* b)
+int direntry_compare_name(void* ctx, const DIRENTRY* a, const DIRENTRY* b)
 {
-    int order = user == NULL ? 1 : *(int*)user;
+    int order = ctx == NULL ? 1 : *(int*)ctx;
     return utf8cmpi(a->fname, b->fname) * order;
 }
 
-int direntry_compare_size(void* user, const DIRENTRY* a, const DIRENTRY* b)
+int direntry_compare_size(void* ctx, const DIRENTRY* a, const DIRENTRY* b)
 {
-    int order = user == NULL ? 1 : *(int*)user;
+    int order = ctx == NULL ? 1 : *(int*)ctx;
     if (a->fsize > b->fsize)
         return 1 * order;
     if (a->fsize < b->fsize)
         return -1 * order;
-    return direntry_compare_name(user, a, b);
+    return direntry_compare_name(ctx, a, b);
 }
 
-int direntry_compare_time(void* user, const DIRENTRY* a, const DIRENTRY* b)
+int direntry_compare_time(void* ctx, const DIRENTRY* a, const DIRENTRY* b)
 {
-    int order = user == NULL ? 1 : *(int*)user;
+    int order = ctx == NULL ? 1 : *(int*)ctx;
     if (a->fdate > b->fdate)
         return 1 * order;
     if (a->fdate < b->fdate)
@@ -45,11 +45,11 @@ int direntry_compare_time(void* user, const DIRENTRY* a, const DIRENTRY* b)
         return 1 * order;
     if (a->ftime < b->ftime)
         return -1 * order;
-    return direntry_compare_name(user, a, b);
+    return direntry_compare_name(ctx, a, b);
 }
 
 
-bool direntry_filter_hidden(void* user, FILINFO* pfi)
+bool direntry_filter_hidden(void* ctx, FILINFO* pfi)
 {
     if (f_is_hidden(pfi))
         return false;
@@ -62,12 +62,12 @@ int direntry_compare_stub(const void* aptr, const void* bptr)
     DIRENTRY* a = *(DIRENTRY**)aptr;
     DIRENTRY* b = *(DIRENTRY**)bptr;
 
-    return g_compare(g_user, a, b);
+    return g_compare(g_compare_ctx, a, b);
 }
 
-int f_opendir_ex(DIREX* direx, const char* pszDir, void* user, 
-    bool (*filter)(void* user, FILINFO* pfi),
-    int (*compare)(void* user, const DIRENTRY* a, const DIRENTRY* b)
+int f_opendir_ex(DIREX* direx, const char* pszDir, 
+    void* filter_ctx, bool (*filter)(void* ctx, FILINFO* pfi),
+    void* compare_ctx, int (*compare)(void* ctx, const DIRENTRY* a, const DIRENTRY* b)
     )
 {
     // Open directory
@@ -97,7 +97,7 @@ int f_opendir_ex(DIREX* direx, const char* pszDir, void* user,
             break;
 
         // Filter unwanted
-        if (filter != NULL && !filter(user, &fi))
+        if (filter != NULL && !filter(filter_ctx, &fi))
             continue;
 
         // Allocate entry
@@ -110,10 +110,10 @@ int f_opendir_ex(DIREX* direx, const char* pszDir, void* user,
     if (compare != NULL)
     {
         g_compare = compare;
-        g_user = user;
+        g_compare_ctx = compare_ctx;
         qsort(direx->stream.p, direx->stream.length / sizeof(void*), sizeof(void*), direntry_compare_stub);
         g_compare = NULL;
-        g_user = NULL;
+        g_compare_ctx = NULL;
     }
 
     f_closedir(&dir);

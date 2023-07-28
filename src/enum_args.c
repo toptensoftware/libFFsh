@@ -331,7 +331,7 @@ bool next_arg(ENUM_ARGS* pctx, ARG* ppath)
                 {
                     // Enumerate directory
                     pctx->didMatch = false;
-                    int err = f_opendir_ex(&pctx->direx, pctx->sz, (void*)pctx->pszBase, direntry_filter, direntry_compare_name);
+                    int err = f_opendir_ex(&pctx->direx, pctx->sz, (void*)pctx->pszBase, direntry_filter, NULL, direntry_compare_name);
                     if (err)
                     {
                         perr("find path failed: '%s', %s (%i)\n", pctx->szArg, f_strerror(err), err);

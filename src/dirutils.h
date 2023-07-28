@@ -32,9 +32,9 @@ typedef struct
 } DIREX;
 
 
-int f_opendir_ex(DIREX* direx, const char* pszDir, void* user, 
-    bool (*filter)(void* user, FILINFO* pfi),
-    int (*compare)(void* user, const DIRENTRY* a, const DIRENTRY* b)
+int f_opendir_ex(DIREX* direx, const char* pszDir, 
+    void* filter_ctx, bool (*filter)(void* user, FILINFO* pfi),
+    void* compare_ctx, int (*compare)(void* user, const DIRENTRY* a, const DIRENTRY* b)
     );
 bool f_readdir_ex(DIREX* dir, DIRENTRY** ppde);
 int f_closedir_ex(DIREX* dir);
