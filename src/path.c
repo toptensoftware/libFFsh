@@ -96,6 +96,7 @@ void pathdir(const char* path, char* dir)
         return;
     }
     memcpy(dir, path, p - path);
+    dir[p-path] = '\0';
 }
 
 
