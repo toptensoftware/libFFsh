@@ -186,5 +186,5 @@ int process_shell(struct PROCESS* proc, const char* psz)
         return 127;
 
     // Process node
-    return process_eval_node(proc, rootNode);
+    return proc->exitcode = process_eval_node(proc, rootNode);
 }
