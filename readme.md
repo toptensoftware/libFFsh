@@ -19,7 +19,7 @@ Included commands:
 * `mkdir [-p|--parents]`
 * `mv [-n|--no-clobber]`
 * `pwd`
-* `rm [-r|--recursive]`
+* `rm [-r|--recursive] [-f|--force]`
 * `rmdir`
 * `sleep (with suffixes 'ms', 's', 'm', 'h', 'd')`
 * `touch`

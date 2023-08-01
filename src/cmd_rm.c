@@ -4,6 +4,7 @@
 int cmd_rm(struct PROCESS* proc)
 {
     bool optRecursive = false;
+    bool optForce = false;
 
     // Process options
     ENUM_ARGS args;
@@ -14,6 +15,8 @@ int cmd_rm(struct PROCESS* proc)
     {
         if (is_switch(&args, &opt, "-r|--recursive"))
             optRecursive = true;
+        if (is_switch(&args, &opt, "-f|--force"))
+            optForce = true;
         else
             unknown_opt(&args, &opt);
     }
@@ -26,14 +29,18 @@ int cmd_rm(struct PROCESS* proc)
     {
         if (!arg.pfi)
         {
-            perr("no such file or directory: '%s'", arg.pszRelative);
+            if (!optForce)
+            {
+                perr("no such file or directory: '%s'", arg.pszRelative);
+                set_enum_args_error(&args, FR_EXIST);
+            }
         }
         else
         {
             if ((arg.pfi->fattrib & AM_DIR) == 0)
             {
                 int err = f_unlink(arg.pszAbsolute);
-                if (err)
+                if (err && !optForce)
                 {
                     perr("removing '%s', %s (%i)", arg.pszRelative, f_strerror(err), err);
                     set_enum_args_error(&args, f_maperr(err));;
@@ -44,7 +51,7 @@ int cmd_rm(struct PROCESS* proc)
                 if (optRecursive)
                 {
                     int err = f_rmdir_r((char*)arg.pszAbsolute, proc->progress);
-                    if (err)
+                    if (err && !optForce)
                     {
                         perr("deleting '%s', %s (%i)", arg.pszRelative, f_strerror(err), err);
                         set_enum_args_error(&args, f_maperr(err));;
