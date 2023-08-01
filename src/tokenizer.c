@@ -70,7 +70,10 @@ static void parse_arg(struct TOKENIZER* tokenizer)
                 return;
 
             default:
-                encode(tokenizer, map_special_char(tokenizer->utf8.codepoint));
+                if (tokenizer->escape_special_chars)
+                    encode(tokenizer, map_special_char(tokenizer->utf8.codepoint));
+                else
+                    encode(tokenizer, tokenizer->utf8.codepoint);
                 utf8_next(&tokenizer->utf8);
                 break;
         }
@@ -78,11 +81,12 @@ static void parse_arg(struct TOKENIZER* tokenizer)
 }
 
 
-void tokenizer_init(struct TOKENIZER* tokenizer, struct MEMPOOL* pool, const char* psz)
+void tokenizer_init(struct TOKENIZER* tokenizer, struct MEMPOOL* pool,  bool specialchars, const char* psz)
 {
     // Store params
     tokenizer->pool = pool;
     tokenizer->psz = psz;
+    tokenizer->escape_special_chars = specialchars;
 
     // Init UTF8 decoder
     utf8_init(&tokenizer->utf8, psz);

@@ -150,7 +150,7 @@ struct NODE* parse(struct PROCESS* process, const char* psz)
     struct PARSER parser;
     parser.pool = &process->pool;
     parser.process = process;
-    tokenizer_init(&parser.tokenizer, &process->pool, psz);
+    tokenizer_init(&parser.tokenizer, &process->pool, true, psz);
     memstream_initnew(&parser.stream, sizeof(void*) * 32);
 
     // Empty command?

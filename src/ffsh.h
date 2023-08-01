@@ -2,3 +2,8 @@
 #include "commands.h"
 #include "enum_args.h"
 #include "ffex.h"
+#include "tokenizer.h"
+#include "parse.h"
+#include "memstream.h"
+#include "utf.h"
+#include "path.h"

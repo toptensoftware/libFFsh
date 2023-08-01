@@ -27,8 +27,9 @@ struct TOKENIZER
     struct MEMPOOL*  pool;          // Memory pool
     struct UTF8      utf8;          // utf8 decoder  
     struct MEMSTREAM builder;       // String builder
+    bool escape_special_chars;      // Escape glob and brace chars
 };
 
-void tokenizer_init(struct TOKENIZER* tokenizer, struct MEMPOOL* pool, const char* psz);
+void tokenizer_init(struct TOKENIZER* tokenizer, struct MEMPOOL* pool, bool specialchars, const char* psz);
 void tokenizer_next(struct TOKENIZER* tokenizer);
 void tokenizer_close(struct TOKENIZER* tokenizer);
