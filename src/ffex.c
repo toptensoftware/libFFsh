@@ -156,7 +156,7 @@ int f_copyfile(const char* pszDest, const char* pszSrc, bool optOverwrite, void 
     }
 
     // Copy
-    char buf[512];
+    char buf[16384];
     while (true)
     {
         // Read
@@ -187,17 +187,17 @@ int f_copyfile(const char* pszDest, const char* pszSrc, bool optOverwrite, void 
     FILINFO fi;
     err = f_stat(pszSrc, &fi);
     if (err)
-        goto fail;
+        return err;
 
     // Update timestamp
     err = f_utime(pszDest, &fi);
     if (err)
-        goto fail;
+        return err;
 
     // Update attributes
     err = f_chmod(pszDest, fi.fattrib, AM_ARC|AM_HID|AM_RDO|AM_SYS);
     if (err)
-        goto fail;
+        return err;
     
     // Success!
     return 0;
