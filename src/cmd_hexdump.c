@@ -71,7 +71,7 @@ int cmd_hexdump(struct PROCESS* proc)
         return end_enum_args(&args);
 
     // Read buffer
-    char buf[128];
+    char buf[16384];
     int bufUsed = 0;
     uint32_t offset = 0;
 
@@ -135,6 +135,11 @@ int cmd_hexdump(struct PROCESS* proc)
                     if (bufUsed > optLength)
                     {
                         bufUsed = optLength;
+                    }
+
+                    if (bufUsed < 16 && proc->progress)
+                    {
+                        proc->progress();
                     }
 
                     // Output hex
