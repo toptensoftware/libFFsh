@@ -24,6 +24,7 @@ void process_init(struct PROCESS* process, bool (*dispatch)(struct PROCESS*))
     process->user_stdout = NULL;
     process->pfn_stdout = write_null;
     process->dispatch_command = dispatch;
+    process->progress = NULL;
     mempool_init(&process->pool, 4096);
     process_set_cwd(process, "/");
 }
@@ -39,6 +40,7 @@ void process_dup(struct PROCESS* process, const struct PROCESS* from)
     process->user_stdout = from->user_stdout;
     process->pfn_stdout = from->pfn_stdout;
     process->dispatch_command = from->dispatch_command;
+    process->progress = from->progress;
     mempool_init(&process->pool, 4096);
     process_set_cwd(process, from->cwd);
 }
