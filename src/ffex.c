@@ -187,17 +187,25 @@ int f_copyfile(const char* pszDest, const char* pszSrc, bool optOverwrite, void 
     FILINFO fi;
     err = f_stat(pszSrc, &fi);
     if (err)
+    {
+        f_unlink(pszDest);
         return err;
+    }
 
+        
     // Update timestamp
     err = f_utime(pszDest, &fi);
-    if (err)
+    {
+        f_unlink(pszDest);
         return err;
+    }
 
     // Update attributes
     err = f_chmod(pszDest, fi.fattrib, AM_ARC|AM_HID|AM_RDO|AM_SYS);
-    if (err)
+    {
+        f_unlink(pszDest);
         return err;
+    }
     
     // Success!
     return 0;
